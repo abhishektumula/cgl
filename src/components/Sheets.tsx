@@ -7,7 +7,8 @@ import { Priority, Subject } from '../lib/types';
 import { useColors } from '../lib/useTheme';
 import { DateField } from './DateField';
 import { MoveSheet } from './SubjectPicker';
-import { Button, Chip, Input, layout, Sheet, tap, KEYBOARD_DONE_ID } from './ui';
+import { showToast } from '../lib/toast';
+import { Button, Chip, Input, layout, Sheet, success, tap, KEYBOARD_DONE_ID } from './ui';
 
 export function SubjectSheet({ visible, onClose, subject }: { visible: boolean; onClose: () => void; subject?: Subject }) {
   const colors = useColors();
@@ -72,13 +73,15 @@ export function AddTaskSheet({ visible, onClose, defaultSubjectId = null }: {
   const [dueDate, setDueDate] = useState<string | undefined>();
   const [pickSubject, setPickSubject] = useState(false);
   const stepRef = useRef<TextInputInstance>(null);
+  const titleRef = useRef<TextInputInstance>(null);
+  const [added, setAdded] = useState<string[]>([]);
 
   // reset the form each time the sheet opens
   const [wasVisible, setWasVisible] = useState(visible);
   if (visible !== wasVisible) {
     setWasVisible(visible);
     if (visible) {
-      setTitle(''); setSteps([]); setStep(''); setPriority('none'); setDueDate(undefined); setSubjectId(defaultSubjectId);
+      setTitle(''); setSteps([]); setStep(''); setPriority('none'); setDueDate(undefined); setSubjectId(defaultSubjectId); setAdded([]);
     }
   }
 
@@ -95,7 +98,15 @@ export function AddTaskSheet({ visible, onClose, defaultSubjectId = null }: {
   const save = (another = false) => {
     if (!title.trim()) return;
     addTask({ title, subjectId, priority, dueDate, subtasks: step.trim() ? [...steps, step] : steps });
-    if (another) { setTitle(''); setSteps([]); setStep(''); } else onClose();
+    success();
+    if (another) {
+      setAdded((a) => [...a, title.trim()]);
+      setTitle(''); setSteps([]); setStep('');
+      setTimeout(() => titleRef.current?.focus(), 0);
+    } else {
+      onClose();
+      showToast(`Added to ${subject?.name ?? 'General'}`);
+    }
   };
 
   return (
@@ -109,7 +120,16 @@ export function AddTaskSheet({ visible, onClose, defaultSubjectId = null }: {
         </View>
       }
     >
+      {added.length > 0 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+          <Text style={{ flex: 1, fontSize: 13, color: colors.sub }} numberOfLines={1}>
+            {added.length === 1 ? `Added "${added[0]}"` : `Added ${added.length} tasks`}
+          </Text>
+        </View>
+      )}
       <TextInput
+        ref={titleRef}
         value={title}
         onChangeText={setTitle}
         placeholder="What do you want to study?"

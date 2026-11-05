@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Alert, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { DataSheet } from '../src/components/DataSheet';
 import { DateField } from '../src/components/DateField';
-import { Chip, Divider, Group, Header, layout, Row, SectionLabel, tap, KEYBOARD_DONE_ID } from '../src/components/ui';
+import { Chip, Divider, Group, Header, layout, Row, SectionLabel, KEYBOARD_DONE_ID } from '../src/components/ui';
 import { formatMinutes } from '../src/lib/dates';
 import { formatBytes, storageUsage } from '../src/lib/storage';
 import { getState, resetAllData, updateSettings, useStore } from '../src/lib/store';
@@ -26,18 +27,7 @@ export default function Settings() {
     if (on && !getState().settings.dailyReminder) Alert.alert('Notifications are off', 'Allow notifications for this app in your phone settings.');
   };
 
-  // Hidden data tools: tap the footer 5 times quickly (or long-press it).
   const [dataOpen, setDataOpen] = useState(false);
-  const taps = useRef<number[]>([]);
-  const footerTap = () => {
-    const now = Date.now();
-    taps.current = [...taps.current.filter((t) => now - t < 1500), now];
-    if (taps.current.length >= 5) {
-      taps.current = [];
-      tap();
-      setDataOpen(true);
-    }
-  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -102,6 +92,15 @@ export default function Settings() {
           Data
         </SectionLabel>
         <Group>
+          <Row onPress={() => setDataOpen(true)}>
+            <Ionicons name="swap-vertical-outline" size={20} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, color: colors.text }}>Backup & transfer</Text>
+              <Text style={{ fontSize: 13, color: colors.sub }}>Copy, paste or share your data as JSON</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.faint} />
+          </Row>
+          <Divider />
           <Row onPress={() => Alert.alert('Erase everything?', 'This cannot be undone.', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Erase', style: 'destructive', onPress: () => resetAllData() },
@@ -109,9 +108,7 @@ export default function Settings() {
             <Text style={{ fontSize: 16, color: colors.danger }}>Erase all data</Text>
           </Row>
         </Group>
-        <Pressable onPress={footerTap} onLongPress={() => { tap(); setDataOpen(true); }} delayLongPress={800}>
-          <Text style={{ color: colors.faint, fontSize: 12, paddingHorizontal: 4, paddingVertical: 8 }}>Everything stays on this phone.</Text>
-        </Pressable>
+        <Text style={{ color: colors.faint, fontSize: 12, paddingHorizontal: 4, paddingVertical: 8 }}>Everything stays on this phone.</Text>
       </ScrollView>
       <DataSheet visible={dataOpen} onClose={() => setDataOpen(false)} />
     </View>

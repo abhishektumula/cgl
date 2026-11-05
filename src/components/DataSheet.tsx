@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import React, { useState } from 'react';
-import { Alert, Share, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Share, Text, TextInput, View } from 'react-native';
 import { exportData, formatBytes, pickBackup } from '../lib/storage';
 import { exportJson, importData, parseBackup, useStore } from '../lib/store';
 import { showToast } from '../lib/toast';
@@ -8,10 +8,7 @@ import { AppState } from '../lib/types';
 import { useColors } from '../lib/useTheme';
 import { Button, Divider, Group, Label, Row, Sheet, KEYBOARD_DONE_ID } from './ui';
 
-/**
- * Hidden data tools (opened by tapping the Settings footer 5 times):
- * copy / share / save the planner as JSON, or paste / open JSON from another phone.
- */
+/** Settings → Backup & transfer: copy / share / save the planner as JSON, or paste / open JSON from another phone. */
 export function DataSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const colors = useColors();
   const counts = useStore((s) => `${s.subjects.length} subjects · ${s.tasks.length} tasks · ${s.sessions.length} sessions · ${s.resources.length} resources`);
@@ -47,13 +44,18 @@ export function DataSheet({ visible, onClose }: { visible: boolean; onClose: () 
     }
   };
 
-  const paste = async () => {
+  // read the clipboard and import straight away (big JSON is slow to show in a text box)
+  const importClipboard = async () => {
     const clip = await Clipboard.getStringAsync();
     if (!clip.trim()) {
       showToast('Clipboard is empty');
       return;
     }
-    setText(clip);
+    try {
+      confirmImport(parseBackup(clip));
+    } catch (e: any) {
+      Alert.alert('Can\'t import', e.message);
+    }
   };
 
   const confirmImport = (data: Partial<AppState>) => {
@@ -97,7 +99,7 @@ export function DataSheet({ visible, onClose }: { visible: boolean; onClose: () 
   const rowText = { fontSize: 16, color: colors.text, flex: 1 } as const;
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Data">
+    <Sheet visible={visible} onClose={onClose} title="Backup & transfer">
       <View style={{ gap: 8 }}>
         <Label>Send to another phone</Label>
         <Group>
@@ -123,14 +125,16 @@ export function DataSheet({ visible, onClose }: { visible: boolean; onClose: () 
           autoCorrect={false}
           style={{
             backgroundColor: colors.muted, borderRadius: 12, padding: 14, minHeight: 110, maxHeight: 200,
-            fontSize: 13, color: colors.text, textAlignVertical: 'top', fontFamily: 'Courier',
+            fontSize: 13, color: colors.text, textAlignVertical: 'top', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
           }}
         />
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Button title="Paste" variant="secondary" style={{ flex: 1 }} onPress={paste} />
-          <Button title="Import" style={{ flex: 1 }} onPress={importText} disabled={!text.trim() || busy} />
-        </View>
-        <Button title="Open a .json file" variant="ghost" onPress={openFile} />
+        {!!text.trim() && <Button title="Import" onPress={importText} disabled={busy} />}
+        <Group>
+          <Row onPress={busy ? undefined : importClipboard}><Text style={rowText}>Import from clipboard</Text></Row>
+          <Divider />
+          <Row onPress={busy ? undefined : openFile}><Text style={rowText}>Open a .json file</Text></Row>
+        </Group>
+        <Text style={{ color: colors.faint, fontSize: 12, paddingHorizontal: 4 }}>Or paste it below</Text>
       </View>
     </Sheet>
   );

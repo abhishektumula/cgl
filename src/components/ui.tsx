@@ -372,6 +372,8 @@ export function Sheet({ visible, onClose, title, children, footer }: {
         </RNAnimated.View>
       </KeyboardAvoidingView>
       <KeyboardDoneBar />
+      {/* pop-ups cover the root toast, so show toasts inside them too */}
+      <Toast />
     </Modal>
   );
 }

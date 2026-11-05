@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import { formatMinutes } from '../lib/dates';
 import { removeSession, saveSession, useStore } from '../lib/store';
 import { Session } from '../lib/types';
@@ -50,13 +50,18 @@ export function SessionSheet({ visible, onClose, session, defaultDate, defaultTa
   const save = async () => {
     if (!title.trim() || saving) return;
     setSaving(true);
-    await saveSession({
-      id: session?.id, title: title.trim(), subjectId, taskId, date, time, durationMin: duration, reminderMin: reminder,
-      notes: session?.notes ?? '',
-    });
-    setSaving(false);
-    success();
-    onClose();
+    try {
+      await saveSession({
+        id: session?.id, title: title.trim(), subjectId, taskId, date, time, durationMin: duration, reminderMin: reminder,
+        notes: session?.notes ?? '',
+      });
+      success();
+      onClose();
+    } catch (e: any) {
+      Alert.alert('Could not save', e?.message ?? String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

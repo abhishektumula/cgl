@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { SessionSheet } from '../../src/components/SessionSheet';
 import { Dot } from '../../src/components/SubjectPicker';
 import { SwipeRow } from '../../src/components/SwipeRow';
@@ -144,7 +143,7 @@ export default function Plan() {
                 {daySessions.map((s, i) => {
                   const sub = subjects.find((x) => x.id === s.subjectId);
                   return (
-                    <Animated.View key={s.id} entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} layout={LinearTransition.duration(240)}>
+                    <View key={s.id}>
                       {i > 0 && <Divider inset={52} />}
                       <SwipeRow actions={[{ icon: 'trash-outline', label: 'Remove', color: colors.danger, onPress: () => removeSession(s.id) }]}>
                         <Row onPress={() => setSheet({ open: true, session: s })}>
@@ -162,7 +161,7 @@ export default function Plan() {
                           </View>
                         </Row>
                       </SwipeRow>
-                    </Animated.View>
+                    </View>
                   );
                 })}
               </Group>

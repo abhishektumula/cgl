@@ -40,8 +40,8 @@ Everything is stored **locally on the device** — no account or server:
 <app documents>/prep-planner/files/          attached PDFs / images
 ```
 
-**Hidden data tools:** in Settings, tap the footer line *“Everything stays on this phone.”* 5 times (or long-press it).
-From there you can copy the data as JSON, share it as text, save it as a `.json` file, or paste / open JSON from another phone to replace the current data. Attached files are not included.
+**Backup & transfer:** Settings → *Backup & transfer*.
+From there you can copy the data as JSON, share it as text, save it as a `.json` file, or import JSON from the clipboard / a pasted text / a `.json` file from another phone to replace the current data. Attached files are not included.
 
 ## Code map
 

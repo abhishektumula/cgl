@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { AddTaskSheet, SubjectSheet } from '../../src/components/Sheets';
 import { MoveSheet } from '../../src/components/SubjectPicker';
 import { TaskRow } from '../../src/components/TaskRow';
@@ -54,10 +53,10 @@ export default function SubjectScreen() {
         ) : (
           <Group>
             {pending.map((t, i) => (
-              <Animated.View key={t.id} entering={FadeIn.duration(200)} exiting={FadeOut.duration(220)} layout={LinearTransition.duration(260)}>
+              <View key={t.id}>
                 {i > 0 && <Divider inset={52} />}
                 <TaskRow task={t} onMove={setMoving} />
-              </Animated.View>
+              </View>
             ))}
           </Group>
         )}
@@ -71,10 +70,10 @@ export default function SubjectScreen() {
             {showDone && (
               <Group>
                 {completed.map((t, i) => (
-                  <Animated.View key={t.id} entering={FadeIn.duration(250)} exiting={FadeOut.duration(200)} layout={LinearTransition.duration(260)}>
+                  <View key={t.id}>
                     {i > 0 && <Divider inset={52} />}
                     <TaskRow task={t} onMove={setMoving} />
-                  </Animated.View>
+                  </View>
                 ))}
               </Group>
             )}

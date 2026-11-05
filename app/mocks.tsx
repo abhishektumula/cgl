@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { DateField } from '../src/components/DateField';
 import { SwipeRow } from '../src/components/SwipeRow';
 import { Button, Divider, EmptyState, Fab, Group, Header, Input, Row, Sheet } from '../src/components/ui';
@@ -31,7 +30,7 @@ function MockSheet({ visible, onClose, mock }: { visible: boolean; onClose: () =
 
   const s = parseFloat(score);
   const t = parseFloat(total);
-  const valid = name.trim() && !isNaN(s) && !isNaN(t) && t > 0;
+  const valid = name.trim() && !isNaN(s) && !isNaN(t) && t > 0 && s <= t;
 
   return (
     <Sheet
@@ -78,7 +77,7 @@ export default function Mocks() {
             )}
             <Group>
               {[...sorted].reverse().map((m, i) => (
-                <Animated.View key={m.id} entering={FadeIn} exiting={FadeOut.duration(200)} layout={LinearTransition.duration(240)}>
+                <View key={m.id}>
                   {i > 0 && <Divider />}
                   <SwipeRow actions={[{ icon: 'trash-outline', label: 'Delete', color: colors.danger, onPress: () => removeMock(m.id) }]}>
                     <Row onPress={() => setSheet({ open: true, mock: m })}>
@@ -89,7 +88,7 @@ export default function Mocks() {
                       <Text style={{ fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] }}>{m.score}<Text style={{ color: colors.faint }}>/{m.total}</Text></Text>
                     </Row>
                   </SwipeRow>
-                </Animated.View>
+                </View>
               ))}
             </Group>
           </>

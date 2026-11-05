@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { AddTaskSheet, SubjectSheet } from '../../src/components/Sheets';
 import { Dot } from '../../src/components/SubjectPicker';
 import { SwipeRow } from '../../src/components/SwipeRow';
@@ -87,7 +86,7 @@ export default function Tasks() {
           <Group>
             <FolderRow id="general" name="General" color={colors.faint} tasks={tasks.filter((t) => t.subjectId === null)} />
             {subjects.map((s) => (
-              <Animated.View key={s.id} entering={FadeIn} exiting={FadeOut.duration(200)} layout={LinearTransition.duration(250)}>
+              <View key={s.id}>
                 <Divider inset={42} />
                 <SwipeRow
                   actions={[
@@ -97,7 +96,7 @@ export default function Tasks() {
                 >
                   <FolderRow id={s.id} name={s.name} color={s.color} tasks={tasks.filter((t) => t.subjectId === s.id)} />
                 </SwipeRow>
-              </Animated.View>
+              </View>
             ))}
             <Divider inset={42} />
             <Row onPress={() => setSubjectSheet({ open: true })}>

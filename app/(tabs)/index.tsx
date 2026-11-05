@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AddTaskSheet } from '../../src/components/Sheets';
 import { Dot } from '../../src/components/SubjectPicker';
 import { TaskRow } from '../../src/components/TaskRow';
 import { Checkbox, Divider, Group, IconButton, ProgressBar, Row, SectionLabel } from '../../src/components/ui';
@@ -27,6 +27,7 @@ export default function Today() {
   const subjects = useStore((s) => s.subjects);
   const focusLog = useStore((s) => s.focusLog);
   const today = todayKey();
+  const [addOpen, setAddOpen] = useState(false);
 
   const todaysSessions = useMemo(
     () => sessions.filter((s) => s.date === today).sort((a, b) => a.time.localeCompare(b.time)),
@@ -36,9 +37,13 @@ export default function Today() {
   const upNext = useMemo(() => {
     const due = tasks.filter((t) => !t.done && t.dueDate && t.dueDate <= today);
     const important = tasks.filter((t) => !t.done && !due.includes(t) && t.priority === 'high');
-    return [...due, ...important]
-      .sort((a, b) => (a.dueDate ?? '9').localeCompare(b.dueDate ?? '9') || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
-      .slice(0, 5);
+    const picked = [...due, ...important]
+      .sort((a, b) => (a.dueDate ?? '9').localeCompare(b.dueDate ?? '9') || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
+    // top up with the newest open topics so freshly added tasks show here too
+    const recent = tasks
+      .filter((t) => !t.done && !picked.includes(t))
+      .sort((a, b) => b.createdAt - a.createdAt);
+    return [...picked, ...recent].slice(0, 5);
   }, [tasks, today]);
 
   const minutes = focusLog[today] ?? 0;
@@ -51,6 +56,7 @@ export default function Today() {
   ].filter(Boolean).join('  ·  ');
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: insets.top + 14, gap: 12, paddingBottom: 40 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         <View style={{ flex: 1, gap: 4 }}>
@@ -105,21 +111,21 @@ export default function Today() {
         </>
       )}
 
-      <SectionLabel>Up next</SectionLabel>
+      <SectionLabel right={<IconButton icon="add" size={20} color={colors.primary} onPress={() => setAddOpen(true)} />}>Up next</SectionLabel>
       {upNext.length === 0 ? (
         <Group>
           <Row onPress={() => router.push('/tasks')}>
             <Ionicons name="leaf-outline" size={20} color={colors.primary} />
-            <Text style={{ flex: 1, fontSize: 15, color: colors.sub }}>Nothing pressing. Pick any topic you like.</Text>
+            <Text style={{ flex: 1, fontSize: 15, color: colors.sub }}>All clear. Tap + to add a topic.</Text>
           </Row>
         </Group>
       ) : (
         <Group>
           {upNext.map((t, i) => (
-            <Animated.View key={t.id} exiting={FadeOut.duration(200)} layout={LinearTransition.duration(250)}>
+            <View key={t.id}>
               {i > 0 && <Divider inset={52} />}
               <TaskRow task={t} showSubject />
-            </Animated.View>
+            </View>
           ))}
         </Group>
       )}
@@ -140,5 +146,7 @@ export default function Today() {
 
       <Text style={{ textAlign: 'center', color: colors.faint, fontSize: 14, marginTop: 16, fontStyle: 'italic' }}>{dailyPick(QUOTES)}</Text>
     </ScrollView>
+    <AddTaskSheet visible={addOpen} onClose={() => setAddOpen(false)} />
+    </View>
   );
 }

@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { Dot, SubjectChips } from '../../src/components/SubjectPicker';
 import { SwipeRow } from '../../src/components/SwipeRow';
 import { Button, Chip, Divider, EmptyState, Fab, Group, Header, IconButton, Input, layout, Row, Sheet, KEYBOARD_DONE_ID } from '../../src/components/ui';
@@ -173,7 +172,7 @@ export default function Resources() {
                 ? `${r.file.originalName}${r.file.size ? ' · ' + formatBytes(r.file.size) : ''}`
                 : r.url.replace(/^https?:\/\/(www\.)?/, '');
               return (
-                <Animated.View key={r.id} entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} layout={LinearTransition.duration(240)}>
+                <View key={r.id}>
                   {i > 0 && <Divider inset={52} />}
                   <SwipeRow actions={[
                     { icon: 'create-outline', label: 'Edit', color: colors.calm, onPress: () => setSheet({ open: true, resource: r }) },
@@ -193,7 +192,7 @@ export default function Resources() {
                       </Pressable>
                     </Row>
                   </SwipeRow>
-                </Animated.View>
+                </View>
               );
             })}
           </Group>

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionSheetIOS, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, type TextInputInstance, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
 import { DateField } from '../../src/components/DateField';
 import { MoveSheet } from '../../src/components/SubjectPicker';
 import { SwipeRow } from '../../src/components/SwipeRow';
@@ -24,8 +24,9 @@ function StepRow({ taskId, sub, color, onMore }: { taskId: string; sub: Subtask;
   const [title, setTitle] = useState(sub.title);
   const [seenTitle, setSeenTitle] = useState(sub.title);
   if (sub.title !== seenTitle) {
+    // changed from outside (not by typing here) → follow the store
     setSeenTitle(sub.title);
-    setTitle(sub.title);
+    if (sub.title !== title.trim()) setTitle(sub.title);
   }
   const meta = [sub.priority !== 'none' ? priorityMeta(sub.priority, colors).label : null, sub.dueDate ? formatDate(sub.dueDate) : null].filter(Boolean);
   return (
@@ -38,8 +39,8 @@ function StepRow({ taskId, sub, color, onMore }: { taskId: string; sub: Subtask;
         <View style={{ flex: 1 }}>
           <TextInput
             value={title}
-            onChangeText={setTitle}
-            onEndEditing={() => (title.trim() ? updateSubtask(taskId, sub.id, { title: title.trim() }) : setTitle(sub.title))}
+            onChangeText={(v) => { setTitle(v); if (v.trim()) updateSubtask(taskId, sub.id, { title: v.trim() }); }}
+            onEndEditing={() => { if (!title.trim()) setTitle(sub.title); }}
             keyboardAppearance={colors.dark ? 'dark' : 'light'} inputAccessoryViewID={KEYBOARD_DONE_ID}
             style={{ fontSize: 16, paddingVertical: 2, color: sub.done ? colors.faint : colors.text, textDecorationLine: sub.done ? 'line-through' : 'none' }}
           />
@@ -121,8 +122,8 @@ export default function TaskScreen() {
           </View>
           <TextInput
             value={title}
-            onChangeText={setTitle}
-            onEndEditing={() => (title.trim() ? updateTask(task.id, { title: title.trim() }) : setTitle(task.title))}
+            onChangeText={(v) => { setTitle(v.replace(/\n/g, ' ')); if (v.trim()) updateTask(task.id, { title: v.replace(/\n/g, ' ').trim() }); }}
+            onEndEditing={() => { if (!title.trim()) setTitle(task.title); }}
             multiline
             submitBehavior="blurAndSubmit"
             returnKeyType="done"
@@ -159,10 +160,10 @@ export default function TaskScreen() {
           )}
           <Group>
             {task.subtasks.map((s, i) => (
-              <Animated.View key={s.id} entering={FadeIn.duration(200)} exiting={FadeOut.duration(180)} layout={LinearTransition.duration(220)}>
+              <View key={s.id}>
                 {i > 0 && <Divider inset={48} />}
                 <StepRow taskId={task.id} sub={s} color={accent} onMore={() => setEditingSub(s.id)} />
-              </Animated.View>
+              </View>
             ))}
             {task.subtasks.length > 0 && <Divider inset={48} />}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 4 }}>
@@ -185,9 +186,7 @@ export default function TaskScreen() {
 
         <TextInput
           value={notes}
-          onChangeText={setNotes}
-          onEndEditing={() => updateTask(task.id, { notes })}
-          onBlur={() => updateTask(task.id, { notes })}
+          onChangeText={(v) => { setNotes(v); updateTask(task.id, { notes: v }); }}
           multiline
           placeholder="Notes"
           placeholderTextColor={colors.faint}

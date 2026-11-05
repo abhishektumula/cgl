@@ -3,12 +3,12 @@ import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-rout
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import React, { useEffect, useMemo } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { KeyboardDoneBar, Toast } from '../src/components/ui';
 import { setupNotifications } from '../src/lib/notifications';
-import { hydrate, useStore } from '../src/lib/store';
+import { flushSave, hydrate, useStore } from '../src/lib/store';
 import { useColors } from '../src/lib/useTheme';
 
 export default function RootLayout() {
@@ -31,6 +31,9 @@ export default function RootLayout() {
   useEffect(() => {
     setupNotifications();
     hydrate();
+    // don't lose the last edit if the app is closed right after it
+    const sub = AppState.addEventListener('change', (s) => { if (s !== 'active') flushSave(); });
+    return () => sub.remove();
   }, []);
 
   // Tapping a reminder opens the relevant screen (Plan for sessions, Focus for the timer).

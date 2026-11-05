@@ -72,12 +72,22 @@ let state: AppState = {
 const listeners = new Set<() => void>();
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+function writeNow() {
+  saveTimer = null;
+  const { hydrated, ...rest } = state;
+  saveData({ version: 1, ...rest });
+}
+
 function persist() {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    const { hydrated, ...rest } = state;
-    saveData({ version: 1, ...rest });
-  }, 300);
+  saveTimer = setTimeout(writeNow, 300);
+}
+
+/** Write any pending change right away (called when the app goes to the background). */
+export function flushSave() {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  writeNow();
 }
 
 function set(updater: (s: AppState) => Partial<AppState>) {
@@ -88,14 +98,14 @@ function set(updater: (s: AppState) => Partial<AppState>) {
 
 export const getState = () => state;
 
+const subscribe = (cb: () => void) => {
+  listeners.add(cb);
+  return () => { listeners.delete(cb); };
+};
+
+/** Selectors must return existing references (or primitives) – derive lists with useMemo in the component. */
 export function useStore<T>(selector: (s: AppState) => T): T {
-  return useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
-    () => selector(state)
-  );
+  return useSyncExternalStore(subscribe, () => selector(state), () => selector(state));
 }
 
 /** Fill in missing fields so older / imported files never crash the app. */
