@@ -1,4 +1,4 @@
-import { Palette, Priority, ResourceType } from './types';
+import { Palette, Priority, ResourceType, StudyKind } from './types';
 
 /** Every palette fills in these tokens, once for light and once for dark mode. */
 export interface Colors {
@@ -218,3 +218,7 @@ export const RESOURCE_TYPES: Record<ResourceType, { label: string; icon: string 
 };
 
 export const radius = 18;
+
+/** Class and self study always use two different colours. */
+export const kindColor = (k: StudyKind, c: Colors) => (k === 'class' ? c.calm : c.primary);
+export const kindSoft = (k: StudyKind, c: Colors) => (k === 'class' ? c.calmSoft : c.primarySoft);

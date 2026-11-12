@@ -11,6 +11,7 @@ import { KeyboardDoneBar, Toast } from '../src/components/ui';
 import { setupNotifications } from '../src/lib/notifications';
 import { flushSave, hydrate, useStore } from '../src/lib/store';
 import { useColors } from '../src/lib/useTheme';
+import { startWidgetSync } from '../src/widgets/sync';
 
 export default function RootLayout() {
   const colors = useColors();
@@ -32,6 +33,7 @@ export default function RootLayout() {
   useEffect(() => {
     setupNotifications();
     hydrate();
+    startWidgetSync();
     // don't lose the last edit if the app is closed right after it
     const sub = AppState.addEventListener('change', (s) => { if (s !== 'active') flushSave(); });
     return () => sub.remove();
@@ -65,6 +67,7 @@ export default function RootLayout() {
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="breathe" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+              <Stack.Screen name="stats" />
             </Stack>
             <TimerRunner />
           </ThemeProvider>

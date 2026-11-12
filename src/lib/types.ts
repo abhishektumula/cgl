@@ -14,6 +14,7 @@ export interface Subtask {
   done: boolean;
   priority: Priority;
   dueDate?: string; // YYYY-MM-DD
+  completedAt?: number;
 }
 
 export interface Task {
@@ -77,7 +78,18 @@ export type ThemePref = 'system' | 'light' | 'dark';
 export type Palette =
   | 'sage' | 'blush' | 'rose' | 'lavender' | 'peach' | 'sky'
   | 'candy' | 'mint' | 'berry' | 'butter' | 'midnight';
-export type TimerStyle = 'ring' | 'aurora' | 'heart' | 'bloom' | 'liquid' | 'flip' | 'orbit';
+export type TimerStyle = 'ring' | 'aurora' | 'heart' | 'bloom' | 'liquid' | 'flip' | 'orbit' | 'hourglass' | 'sunrise';
+
+/** What a focus round is for – shown in two different colours everywhere. */
+export type StudyKind = 'class' | 'study';
+
+/** One stretch of focused time, from start to end (epoch ms). */
+export interface FocusEntry {
+  id: string;
+  kind: StudyKind;
+  start: number;
+  end: number;
+}
 
 export interface Settings {
   theme: ThemePref;
@@ -107,7 +119,8 @@ export interface TimerState {
   endAt?: number; // epoch ms when running
   remainingMs: number; // when paused
   round: number; // completed focus rounds in current cycle
-  subjectId: string | null;
+  /** class or self-study – what the current focus round is logged as */
+  kind: StudyKind;
   notificationId?: string;
   /** focus milliseconds already studied but not yet credited as a whole minute */
   carryMs?: number;
@@ -120,7 +133,11 @@ export interface AppState {
   sessions: Session[];
   resources: Resource[];
   mocks: MockTest[];
-  focusLog: Record<string, number>; // date -> minutes studied
+  focusLog: Record<string, number>; // date -> minutes studied (class + study)
+  /** every focus stretch with its start / end time – drives the timeline and the class / study split */
+  focusEntries: FocusEntry[];
+  /** rewards the user has already been told about */
+  seenRewards: string[];
   settings: Settings;
   timer: TimerState;
 }

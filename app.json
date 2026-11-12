@@ -38,7 +38,67 @@
       ],
       "expo-sharing",
       "expo-font",
-      "expo-widgets",
+      [
+        "expo-widgets",
+        {
+          "enableAndroid": true,
+          "widgets": [
+            {
+              "name": "FocusWidget",
+              "displayName": "Focus timer",
+              "description": "Live countdown and today's study time",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ]
+              },
+              "android": {
+                "targetCellWidth": 2,
+                "targetCellHeight": 2,
+                "minWidth": 140,
+                "minHeight": 140
+              }
+            },
+            {
+              "name": "TasksWidget",
+              "displayName": "Up next",
+              "description": "Your next tasks at a glance",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "systemLarge"
+                ]
+              },
+              "android": {
+                "targetCellWidth": 3,
+                "targetCellHeight": 2,
+                "minWidth": 210,
+                "minHeight": 140
+              }
+            },
+            {
+              "name": "CalendarWidget",
+              "displayName": "Today's plan",
+              "description": "Today's date and study sessions",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "systemLarge"
+                ]
+              },
+              "android": {
+                "targetCellWidth": 3,
+                "targetCellHeight": 2,
+                "minWidth": 210,
+                "minHeight": 140
+              }
+            }
+          ]
+        }
+      ],
       [
         "expo-alternate-app-icons",
         [

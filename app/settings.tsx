@@ -8,7 +8,10 @@ import { Chip, Divider, Group, Header, layout, Row, SectionLabel, KEYBOARD_DONE_
 import { formatMinutes } from '../src/lib/dates';
 import { formatBytes, storageUsage } from '../src/lib/storage';
 import { getState, resetAllData, updateSettings, useStore } from '../src/lib/store';
+import { needText, rewardFor } from '../src/lib/rewards';
 import { PALETTE_ORDER, PALETTES } from '../src/lib/theme';
+import { showToast } from '../src/lib/toast';
+import { useUnlocked } from '../src/lib/useStats';
 import { useColors } from '../src/lib/useTheme';
 
 function AppIconPicker() {
@@ -48,6 +51,7 @@ const EXAMS =['SSC CGL', 'SSC CHSL', 'UPSC', 'Bank PO', 'RRB NTPC', 'State PSC']
 export default function Settings() {
   const colors = useColors();
   const settings = useStore((s) => s.settings);
+  const unlocked = useUnlocked();
   const [name, setName] = useState(settings.userName);
   const [exam, setExam] = useState(settings.examName);
   // reads the files folder – do it once, not on every keystroke
@@ -81,28 +85,39 @@ export default function Settings() {
             {PALETTE_ORDER.map((id) => {
               const p = PALETTES[id][colors.dark ? 'dark' : 'light'];
               const active = settings.palette === id;
+              const open = unlocked('palette', id) || active;
               return (
                 <Pressable
                   key={id}
-                  accessibilityLabel={`${PALETTES[id].name} theme`}
-                  onPress={() => { tap(); updateSettings({ palette: id }); }}
+                  accessibilityLabel={`${PALETTES[id].name} theme${open ? '' : ', locked'}`}
+                  onPress={() => {
+                    tap();
+                    if (open) { updateSettings({ palette: id }); return; }
+                    const r = rewardFor('palette', id);
+                    showToast(`🔒 ${PALETTES[id].name} – ${r ? needText(r.need) : 'locked'}`);
+                  }}
                   style={{ width: '33.33%', alignItems: 'center', gap: 6, paddingVertical: 8 }}
                 >
                   <View style={{
                     width: 52, height: 52, borderRadius: 26, padding: 3,
                     borderWidth: 2, borderColor: active ? p.primary : 'transparent',
                   }}>
-                    <View style={{ flex: 1, borderRadius: 23, overflow: 'hidden', backgroundColor: p.bg, flexDirection: 'row' }}>
+                    <View style={{ flex: 1, borderRadius: 23, overflow: 'hidden', backgroundColor: p.bg, flexDirection: 'row', opacity: open ? 1 : 0.3 }}>
                       <View style={{ flex: 1, backgroundColor: p.primary }} />
                       <View style={{ flex: 1, backgroundColor: p.calm }} />
                     </View>
+                    {!open && (
+                      <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="lock-closed" size={16} color={colors.sub} />
+                      </View>
+                    )}
                     {active && (
                       <View style={{ position: 'absolute', right: -2, bottom: -2, width: 20, height: 20, borderRadius: 10, backgroundColor: p.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.card }}>
                         <Ionicons name="checkmark" size={11} color="#fff" />
                       </View>
                     )}
                   </View>
-                  <Text style={{ fontSize: 13, color: active ? colors.text : colors.sub, fontWeight: active ? '600' : '400' }}>{PALETTES[id].name}</Text>
+                  <Text style={{ fontSize: 13, color: active ? colors.text : open ? colors.sub : colors.faint, fontWeight: active ? '600' : '400' }}>{PALETTES[id].name}</Text>
                 </Pressable>
               );
             })}

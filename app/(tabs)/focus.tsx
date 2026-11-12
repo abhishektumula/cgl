@@ -1,22 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { SubjectChips } from '../../src/components/SubjectPicker';
 import { TIMER_STYLES, TimerFace } from '../../src/components/TimerFaces';
 import { showBreakPrompt } from '../../src/components/TimerRunner';
 import { Chip, Header, IconButton, Label, layout, Sheet, tap } from '../../src/components/ui';
 import { addDays, formatMinutes, fromKey, todayKey } from '../../src/lib/dates';
 import { exactAlarmsAllowed, requestExactAlarms } from '../../src/lib/notifications';
+import { needText, rewardFor } from '../../src/lib/rewards';
+import { dayTotals, KIND_ICON, KIND_LABEL } from '../../src/lib/stats';
 import {
-  completeTimer, pauseTimer, resetTimer, setTimerMode, setTimerSubject, startTimer, timerRemaining, timerTotal,
+  completeTimer, pauseTimer, resetTimer, setTimerKind, setTimerMode, startTimer, timerRemaining, timerTotal,
   updateSettings, useStore,
 } from '../../src/lib/store';
-import { TimerMode } from '../../src/lib/types';
+import { Colors, kindColor, kindSoft } from '../../src/lib/theme';
+import { showToast } from '../../src/lib/toast';
+import { StudyKind, TimerMode, TimerState, TimerStyle } from '../../src/lib/types';
+import { useUnlocked } from '../../src/lib/useStats';
 import { useColors } from '../../src/lib/useTheme';
 
 const LABEL: Record<TimerMode, string> = { focus: 'Focus', short: 'Break', long: 'Long break' };
+
+const accentsFor = (t: Pick<TimerState, 'mode' | 'kind'>, colors: Colors) =>
+  t.mode === 'focus'
+    ? [kindColor(t.kind, colors), t.kind === 'class' ? colors.primary : colors.calm]
+    : [colors.warning, colors.calm];
 
 /** The only part of the screen that re-renders every tick. */
 function TimerDisplay() {
@@ -31,8 +41,7 @@ function TimerDisplay() {
     return () => clearInterval(id);
   }, [timer.running]);
 
-  const accent = timer.mode === 'focus' ? colors.primary : colors.calm;
-  const accent2 = timer.mode === 'focus' ? colors.calm : colors.primary;
+  const [accent, accent2] = accentsFor(timer, colors);
   const total = timerTotal(timer, settings);
   const remaining = timerRemaining(timer);
   const progress = total ? 1 - remaining / total : 0;
@@ -63,13 +72,99 @@ function TimerDisplay() {
   );
 }
 
+/** Class or self study – two big buttons, each in its own colour. */
+function KindSwitch() {
+  const colors = useColors();
+  const kind = useStore((s) => s.timer.kind);
+  const mode = useStore((s) => s.timer.mode);
+  return (
+    <View style={{ flexDirection: 'row', gap: 10, opacity: mode === 'focus' ? 1 : 0.55 }}>
+      {(['study', 'class'] as StudyKind[]).map((k) => {
+        const active = kind === k;
+        const c = kindColor(k, colors);
+        return (
+          <Pressable
+            key={k}
+            accessibilityLabel={`Log as ${KIND_LABEL[k]}`}
+            accessibilityState={{ selected: active }}
+            onPress={() => { if (!active) { tap(); setTimerKind(k); } }}
+            style={({ pressed }) => ({
+              flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+              paddingVertical: 13, borderRadius: 16, borderWidth: 1.5,
+              borderColor: active ? c : colors.border, backgroundColor: active ? kindSoft(k, colors) : 'transparent',
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            })}
+          >
+            <Ionicons name={KIND_ICON[k] as any} size={18} color={active ? c : colors.faint} />
+            <Text style={{ fontSize: 15, fontWeight: active ? '600' : '500', color: active ? colors.text : colors.sub }}>{KIND_LABEL[k]}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function StylePicker({ chips }: { chips?: boolean }) {
+  const colors = useColors();
+  const current = useStore((s) => s.settings.timerStyle);
+  const unlocked = useUnlocked();
+  const pick = (id: TimerStyle) => {
+    tap();
+    if (!unlocked('style', id)) {
+      const r = rewardFor('style', id);
+      showToast(`🔒 ${r?.name ?? 'Locked'} – ${r ? needText(r.need) : ''}`);
+      return;
+    }
+    updateSettings({ timerStyle: id });
+  };
+  if (chips) {
+    return (
+      <View style={layout.row}>
+        {TIMER_STYLES.map((st) => (
+          <Chip
+            key={st.id}
+            label={st.label}
+            icon={(unlocked('style', st.id) ? st.icon : 'lock-closed') as any}
+            active={current === st.id}
+            onPress={() => pick(st.id)}
+          />
+        ))}
+      </View>
+    );
+  }
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }}>
+      {TIMER_STYLES.map((st) => {
+        const active = current === st.id;
+        const open = unlocked('style', st.id);
+        return (
+          <Pressable
+            key={st.id}
+            accessibilityLabel={`${st.label} timer style${open ? '' : ', locked'}`}
+            onPress={() => pick(st.id)}
+            style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? colors.primarySoft : 'transparent' }}
+          >
+            <Ionicons name={st.icon as any} size={18} color={active ? colors.primary : open ? colors.sub : colors.border} />
+            {!open && (
+              <View style={{ position: 'absolute', right: 3, bottom: 3, width: 14, height: 14, borderRadius: 7, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="lock-closed" size={9} color={colors.faint} />
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function Focus() {
   const colors = useColors();
   const mode = useStore((s) => s.timer.mode);
+  const kind = useStore((s) => s.timer.kind);
   const running = useStore((s) => s.timer.running);
-  const subjectId = useStore((s) => s.timer.subjectId);
   const settings = useStore((s) => s.settings);
   const focusLog = useStore((s) => s.focusLog);
+  const focusEntries = useStore((s) => s.focusEntries);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exactOk, setExactOk] = useState(true);
 
@@ -82,23 +177,32 @@ export default function Focus() {
     if (settingsOpen) exactAlarmsAllowed().then(setExactOk);
   }, [settingsOpen]);
 
-  const accent = mode === 'focus' ? colors.primary : colors.calm;
+  const [accent] = accentsFor({ mode, kind }, colors);
+  const today = todayKey();
 
   const week = useMemo(() => {
     const t = todayKey();
     return Array.from({ length: 7 }, (_, i) => {
       const k = addDays(t, i - 6);
-      return { k, min: focusLog[k] ?? 0, label: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][fromKey(k).getDay()] };
+      return { k, ...dayTotals({ focusLog, focusEntries }, k), label: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][fromKey(k).getDay()] };
     });
-  }, [focusLog]);
-  const maxWeek = Math.max(...week.map((w) => w.min), 60);
-  const weekTotal = week.reduce((n, w) => n + w.min, 0);
-  const today = todayKey();
+  }, [focusLog, focusEntries]);
+  const maxWeek = Math.max(...week.map((w) => w.total), 60);
+  const todayTotals = week[6];
+  const weekTotal = week.reduce((n, w) => n + w.total, 0);
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Focus" right={<IconButton icon="options-outline" color={colors.sub} onPress={() => setSettingsOpen(true)} />} />
-      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, gap: 22, paddingBottom: 40 }}>
+      <Header
+        title="Focus"
+        right={
+          <View style={{ flexDirection: 'row' }}>
+            <IconButton icon="stats-chart-outline" color={colors.sub} onPress={() => router.push('/stats')} />
+            <IconButton icon="options-outline" color={colors.sub} onPress={() => setSettingsOpen(true)} />
+          </View>
+        }
+      />
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, gap: 20, paddingBottom: 40 }}>
         <View style={{ flexDirection: 'row', alignSelf: 'center', backgroundColor: colors.muted, borderRadius: 999, padding: 4 }}>
           {(['focus', 'short', 'long'] as TimerMode[]).map((m) => (
             <Pressable
@@ -132,38 +236,37 @@ export default function Focus() {
           />
         </View>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
-          {TIMER_STYLES.map((st) => {
-            const active = settings.timerStyle === st.id;
-            return (
-              <Pressable
-                key={st.id}
-                accessibilityLabel={`${st.label} timer style`}
-                onPress={() => { tap(); updateSettings({ timerStyle: st.id }); }}
-                style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? colors.primarySoft : 'transparent' }}
-              >
-                <Ionicons name={st.icon as any} size={19} color={active ? colors.primary : colors.faint} />
-              </Pressable>
-            );
-          })}
-        </View>
+        <KindSwitch />
 
-        <SubjectChips value={subjectId} onChange={setTimerSubject} />
+        <StylePicker />
 
-        <View style={{ gap: 10, marginTop: 4 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2 }}>
+        <Pressable onPress={() => router.push('/stats')} style={({ pressed }) => ({ gap: 12, marginTop: 4, opacity: pressed ? 0.8 : 1 })}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 2 }}>
             <Label>This week</Label>
+            <View style={{ flex: 1 }} />
             <Text style={{ fontSize: 13, color: colors.sub }}>{formatMinutes(weekTotal)}</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.faint} style={{ marginLeft: 4 }} />
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 70, gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 74, gap: 10 }}>
             {week.map((w) => (
               <View key={w.k} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-                <View style={{ width: '100%', height: Math.max(3, (w.min / maxWeek) * 50), borderRadius: 6, backgroundColor: w.k === today ? colors.primary : colors.primarySoft }} />
+                <View style={{ width: '100%', height: Math.max(3, (w.total / maxWeek) * 54), borderRadius: 6, overflow: 'hidden', backgroundColor: colors.muted, justifyContent: 'flex-end' }}>
+                  <View style={{ flex: w.study, backgroundColor: kindColor('study', colors), opacity: w.k === today ? 1 : 0.7 }} />
+                  <View style={{ flex: w.class, backgroundColor: kindColor('class', colors), opacity: w.k === today ? 1 : 0.7 }} />
+                </View>
                 <Text style={{ fontSize: 11, color: w.k === today ? colors.text : colors.faint }}>{w.label}</Text>
               </View>
             ))}
           </View>
-        </View>
+          <View style={{ flexDirection: 'row', gap: 16, justifyContent: 'center' }}>
+            {(['study', 'class'] as StudyKind[]).map((k) => (
+              <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: kindColor(k, colors) }} />
+                <Text style={{ fontSize: 12, color: colors.sub }}>{KIND_LABEL[k]} today · {formatMinutes(todayTotals[k])}</Text>
+              </View>
+            ))}
+          </View>
+        </Pressable>
       </ScrollView>
 
       <Sheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} title="Timer">
@@ -172,12 +275,8 @@ export default function Focus() {
         <Preset label="Long break" values={[15, 20, 30]} value={settings.longBreakMin} onPick={(v) => updateSettings({ longBreakMin: v })} />
         <Preset label="Long break after" values={[2, 3, 4]} suffix=" rounds" value={settings.roundsBeforeLong} onPick={(v) => updateSettings({ roundsBeforeLong: v })} />
         <View style={{ gap: 8 }}>
-          <Label>Style</Label>
-          <View style={layout.row}>
-            {TIMER_STYLES.map((st) => (
-              <Chip key={st.id} label={st.label} icon={st.icon as any} active={settings.timerStyle === st.id} onPress={() => updateSettings({ timerStyle: st.id })} />
-            ))}
-          </View>
+          <Label>Clock</Label>
+          <StylePicker chips />
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flex: 1 }}>

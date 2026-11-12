@@ -9,16 +9,19 @@ import {
 import { hideLiveTimer, showLiveTimer } from '../live/liveTimer';
 import { deleteStoredFile, loadData, saveData } from './storage';
 import { showToast } from './toast';
+import { emitRewards, REWARDS, unlockedIds } from './rewards';
+import { currentStreak, lifetime } from './stats';
 import { PALETTES, SUBJECT_COLORS } from './theme';
 import {
-  AppState, MockTest, Priority, Resource, Session, Settings, Subject, Subtask, Task, TimerMode, TimerStyle,
+  AppState, FocusEntry, MockTest, Priority, Resource, Session, Settings, StudyKind, Subject, Subtask, Task, TimerMode,
+  TimerState, TimerStyle,
 } from './types';
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 const defaultSettings: Settings = {
   theme: 'system',
-  palette: 'sage',
+  palette: 'blush',
   timerStyle: 'ring',
   liveTimer: true,
   showCountdown: true,
@@ -69,9 +72,15 @@ let state: AppState = {
   resources: [],
   mocks: [],
   focusLog: {},
+  focusEntries: [],
+  seenRewards: [],
   settings: defaultSettings,
-  timer: { mode: 'focus', running: false, remainingMs: defaultSettings.focusMin * 60000, round: 0, subjectId: null },
+  timer: freshTimer(),
 };
+
+function freshTimer(): TimerState {
+  return { mode: 'focus', running: false, remainingMs: defaultSettings.focusMin * 60000, round: 0, kind: 'study' };
+}
 
 const listeners = new Set<() => void>();
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -102,7 +111,7 @@ function set(updater: (s: AppState) => Partial<AppState>) {
 
 export const getState = () => state;
 
-const subscribe = (cb: () => void) => {
+export const subscribe = (cb: () => void) => {
   listeners.add(cb);
   return () => { listeners.delete(cb); };
 };
@@ -112,7 +121,7 @@ export function useStore<T>(selector: (s: AppState) => T): T {
   return useSyncExternalStore(subscribe, () => selector(state), () => selector(state));
 }
 
-const TIMER_STYLES: TimerStyle[] = ['ring', 'aurora', 'heart', 'bloom', 'liquid', 'flip', 'orbit'];
+const TIMER_STYLES: TimerStyle[] = ['ring', 'aurora', 'heart', 'bloom', 'liquid', 'flip', 'orbit', 'hourglass', 'sunrise'];
 
 function normalizeSettings(saved?: Partial<Settings>): Settings {
   const s = { ...defaultSettings, ...saved };
@@ -130,9 +139,17 @@ function normalize(saved: Partial<AppState>): Omit<AppState, 'hydrated'> {
     resources: saved.resources ?? [],
     mocks: saved.mocks ?? [],
     focusLog: saved.focusLog ?? {},
+    focusEntries: Array.isArray(saved.focusEntries) ? saved.focusEntries : [],
+    seenRewards: Array.isArray(saved.seenRewards) ? saved.seenRewards : [],
     settings: normalizeSettings(saved.settings),
-    timer: saved.timer ?? state.timer,
+    timer: normalizeTimer(saved.timer),
   };
+}
+
+function normalizeTimer(t?: Partial<TimerState> & { subjectId?: unknown }): TimerState {
+  if (!t || !t.mode) return state.timer;
+  const { subjectId, ...rest } = t;
+  return { ...freshTimer(), ...rest, kind: t.kind === 'class' ? 'class' : 'study' };
 }
 
 /** All planner data as a JSON string (same format as data.json) – for copy / share to another phone. */
@@ -183,7 +200,10 @@ export async function hydrate() {
   try {
     const saved = await loadData<Partial<AppState>>();
     if (saved) {
-      set(() => ({ ...normalize(saved), hydrated: true }));
+      const next = normalize(saved);
+      // first launch with rewards: whatever is already earned counts as seen – no pile of pop-ups
+      if (!Array.isArray(saved.seenRewards)) next.seenRewards = unlockedIds(lifetime(next));
+      set(() => ({ ...next, hydrated: true }));
       // re-attach to a timer that kept running while the app was closed – after the first screen is up
       setTimeout(syncLiveTimer, 1500);
     } else {
@@ -261,7 +281,7 @@ export function toggleTask(id: string) {
         ...t,
         done,
         completedAt: done ? Date.now() : undefined,
-        subtasks: t.subtasks.map((s) => ({ ...s, done })),
+        subtasks: t.subtasks.map((s) => (s.done === done ? s : { ...s, done, completedAt: done ? Date.now() : undefined })),
       };
     }),
   }));
@@ -295,7 +315,7 @@ export function updateSubtask(taskId: string, subId: string, patch: Partial<Subt
 export function toggleSubtask(taskId: string, subId: string) {
   updateTaskRaw(taskId, (t) => ({
     ...t,
-    subtasks: t.subtasks.map((s) => (s.id === subId ? { ...s, done: !s.done } : s)),
+    subtasks: t.subtasks.map((s) => (s.id === subId ? { ...s, done: !s.done, completedAt: s.done ? undefined : Date.now() } : s)),
   }));
 }
 
@@ -433,9 +453,9 @@ export async function resetAllData() {
     state.timer.notificationId,
   ]);
   set(() => ({
-    subjects: [], tasks: [], sessions: [], resources: [], mocks: [], focusLog: {},
+    subjects: [], tasks: [], sessions: [], resources: [], mocks: [], focusLog: {}, focusEntries: [], seenRewards: [],
     settings: defaultSettings,
-    timer: { mode: 'focus', running: false, remainingMs: defaultSettings.focusMin * 60000, round: 0, subjectId: null },
+    timer: freshTimer(),
   }));
   hideLiveTimer();
 }
@@ -452,6 +472,14 @@ export const timerRemaining = (t = state.timer) =>
 export const timerTotal = (t = state.timer, s: Settings = state.settings) => Math.max(modeMinutes(t.mode, s) * 60000, t.remainingMs);
 
 const TIMER_TITLE: Record<TimerMode, string> = { focus: 'Focus', short: 'Short break', long: 'Long break' };
+const KIND_TITLE: Record<StudyKind, string> = { class: 'Class', study: 'Self study' };
+
+/** Timer colour for the current round: study / class have their own, breaks are always calm. */
+export function timerColor(t: TimerState, s: Settings = state.settings, dark = false) {
+  const p = (PALETTES[s.palette] ?? PALETTES.blush)[dark ? 'dark' : 'light'];
+  if (t.mode !== 'focus') return p.warning;
+  return t.kind === 'class' ? p.calm : p.primary;
+}
 
 /** Mirror the timer in the notification shade / Lock Screen (or remove it there). */
 export function syncLiveTimer() {
@@ -463,36 +491,62 @@ export function syncLiveTimer() {
     hideLiveTimer();
     return;
   }
-  const subject = t.mode === 'focus' ? state.subjects.find((x) => x.id === t.subjectId)?.name : undefined;
-  const palette = PALETTES[s.palette] ?? PALETTES.sage;
   const now = Date.now();
   showLiveTimer({
     mode: t.mode,
-    title: subject ? `${TIMER_TITLE[t.mode]} · ${subject}` : TIMER_TITLE[t.mode],
+    title: t.mode === 'focus' ? KIND_TITLE[t.kind] : TIMER_TITLE[t.mode],
     subtitle: t.mode === 'focus' ? `Round ${Math.min(t.round + 1, s.roundsBeforeLong)} of ${s.roundsBeforeLong}` : 'Rest your eyes',
     endAt: t.running && t.endAt ? t.endAt : now + t.remainingMs,
     totalMs: total,
     pausedAt: t.running ? 0 : now,
-    color: t.mode === 'focus' ? palette.light.primary : palette.light.calm,
+    color: timerColor(t, s),
   });
 }
 
-/** Add studied focus time to today. Seconds are carried over so pausing often never loses (or invents) minutes. */
-function creditFocus(ms: number) {
-  const totalMs = (state.timer.carryMs ?? 0) + Math.max(0, ms);
+/** Gaps shorter than this between two stretches of the same kind are joined into one session. */
+const JOIN_GAP = 3 * 60000;
+
+function addEntry(entries: FocusEntry[], kind: StudyKind, start: number, end: number): FocusEntry[] {
+  if (end - start < 15000) return entries; // a few seconds isn't a session
+  const last = entries[entries.length - 1];
+  if (last && last.kind === kind && start - last.end < JOIN_GAP && start >= last.end - 1000) {
+    return [...entries.slice(0, -1), { ...last, end }];
+  }
+  return [...entries, { id: uid(), kind, start, end }];
+}
+
+/**
+ * Add studied focus time (the stretch start → end) to today's total and the session log.
+ * Seconds are carried over so pausing often never loses (or invents) minutes.
+ */
+function creditFocus(start: number, end: number) {
+  const ms = Math.max(0, end - start);
+  const totalMs = (state.timer.carryMs ?? 0) + ms;
   const mins = Math.floor(totalMs / 60000);
   const key = todayKey();
   set((st) => ({
     focusLog: mins > 0 ? { ...st.focusLog, [key]: (st.focusLog[key] ?? 0) + mins } : st.focusLog,
+    focusEntries: addEntry(st.focusEntries, st.timer.kind, start, end),
     timer: { ...st.timer, carryMs: totalMs - mins * 60000 },
   }));
+  checkRewards();
 }
 
 /** Credit focus time studied since the last start (used when pausing / skipping / resetting / switching mode). */
 function logFocus(t = state.timer) {
-  if (t.mode !== 'focus' || !t.running) return;
+  if (t.mode !== 'focus' || !t.running || !t.endAt) return;
   // while running, remainingMs holds the value captured at start
-  creditFocus(t.remainingMs - timerRemaining(t));
+  const now = Math.min(Date.now(), t.endAt);
+  creditFocus(t.endAt - t.remainingMs, now);
+}
+
+/** Tell the user about clocks / themes they just earned. */
+export function checkRewards() {
+  const earned = unlockedIds(lifetime(state));
+  const fresh = earned.filter((id) => !state.seenRewards.includes(id));
+  if (!fresh.length) return;
+  set((st) => ({ seenRewards: [...st.seenRewards, ...fresh] }));
+  emitRewards(REWARDS.filter((r) => fresh.includes(r.id)));
 }
 
 export async function startTimer() {
@@ -530,9 +584,18 @@ export function setTimerMode(mode: TimerMode) {
   cancelNotifications([t.notificationId]);
 }
 
-export function setTimerSubject(subjectId: string | null) {
-  set((st) => ({ timer: { ...st.timer, subjectId } }));
-  if (state.timer.running) syncLiveTimer();
+/** Switch between class and self study. While running, the time so far is logged under the old kind. */
+export function setTimerKind(kind: StudyKind) {
+  const t = state.timer;
+  if (t.kind === kind) return;
+  if (t.running && t.endAt) {
+    logFocus(t);
+    // the next stretch starts now
+    set((st) => ({ timer: { ...st.timer, kind, remainingMs: timerRemaining(t) } }));
+  } else {
+    set((st) => ({ timer: { ...st.timer, kind } }));
+  }
+  syncLiveTimer();
 }
 
 export async function resetTimer() {
@@ -551,9 +614,9 @@ export function completeTimer(skipped = false): TimerMode {
   if (skipped) {
     logFocus(t);
     cancelNotifications([t.notificationId]);
-  } else if (t.mode === 'focus') {
+  } else if (t.mode === 'focus' && t.endAt) {
     // the whole round ran out: credit what was left at the last start
-    creditFocus(t.remainingMs);
+    creditFocus(t.endAt - t.remainingMs, t.endAt);
   }
   let next: TimerMode = 'focus';
   let round = t.round;
@@ -574,16 +637,7 @@ export function completeTimer(skipped = false): TimerMode {
 
 /* ---------------- Stats ---------------- */
 
-export function streak(focusLog: Record<string, number>) {
-  let n = 0;
-  let day = todayKey();
-  if (!focusLog[day]) day = addDays(day, -1); // today not studied yet doesn't break the streak
-  while (focusLog[day] > 0) {
-    n++;
-    day = addDays(day, -1);
-  }
-  return n;
-}
+export const streak = currentStreak;
 
 /* ---------------- Undo ---------------- */
 

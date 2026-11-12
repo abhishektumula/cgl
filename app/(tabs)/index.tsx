@@ -6,9 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddTaskSheet } from '../../src/components/Sheets';
 import { Dot } from '../../src/components/SubjectPicker';
 import { TaskRow } from '../../src/components/TaskRow';
-import { Checkbox, Divider, Group, IconButton, ProgressBar, Row, SectionLabel } from '../../src/components/ui';
+import { Legend, SplitBar } from '../../src/components/StatsBits';
+import { Checkbox, Divider, Group, IconButton, Row, SectionLabel } from '../../src/components/ui';
 import { daysBetween, formatLongDate, formatMinutes, formatTime, todayKey } from '../../src/lib/dates';
 import { dailyPick, QUOTES } from '../../src/lib/quotes';
+import { dayTotals } from '../../src/lib/stats';
 import { streak, toggleSession, useStore } from '../../src/lib/store';
 import { PRIORITY_RANK } from '../../src/lib/theme';
 import { useColors } from '../../src/lib/useTheme';
@@ -26,6 +28,7 @@ export default function Today() {
   const sessions = useStore((s) => s.sessions);
   const subjects = useStore((s) => s.subjects);
   const focusLog = useStore((s) => s.focusLog);
+  const focusEntries = useStore((s) => s.focusEntries);
   const today = todayKey();
   const [addOpen, setAddOpen] = useState(false);
 
@@ -46,14 +49,13 @@ export default function Today() {
     return [...picked, ...recent].slice(0, 5);
   }, [tasks, today]);
 
-  const minutes = focusLog[today] ?? 0;
+  const totals = useMemo(() => dayTotals({ focusLog, focusEntries }, today), [focusLog, focusEntries, today]);
+  const minutes = totals.total;
   const days = settings.examDate ? daysBetween(today, settings.examDate) : null;
   const currentStreak = streak(focusLog);
 
-  const line = [
-    settings.showCountdown && days !== null && days > 0 ? `${days} days to ${settings.examName || 'your exam'}` : null,
-    currentStreak > 1 ? `${currentStreak}-day streak` : null,
-  ].filter(Boolean).join('  ·  ');
+  const line = settings.showCountdown && days !== null && days > 0 ? `${days} days to ${settings.examName || 'your exam'}` : '';
+  const goalPct = Math.min(100, Math.round((minutes / Math.max(1, settings.dailyGoalMin)) * 100));
 
   return (
     <View style={{ flex: 1 }}>
@@ -78,13 +80,32 @@ export default function Today() {
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: '600', color: colors.text }}>{formatMinutes(minutes)}</Text>
-            <Text style={{ fontSize: 13, color: colors.sub }}>studied today</Text>
+            <Text style={{ fontSize: 13, color: colors.sub }}>focused today · {goalPct}% of goal</Text>
           </View>
           <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="play" size={20} color={colors.onPrimary} style={{ marginLeft: 2 }} />
           </View>
         </View>
-        <ProgressBar value={minutes / Math.max(1, settings.dailyGoalMin)} />
+        <SplitBar totals={totals} colors={colors} height={8} />
+        <Legend totals={totals} colors={colors} size={12} />
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push('/stats')}
+        style={({ pressed }) => ({
+          flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, backgroundColor: colors.card, opacity: pressed ? 0.85 : 1,
+        })}
+      >
+        <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: (focusLog[today] ?? 0) > 0 ? colors.primary : colors.muted }}>
+          <Ionicons name="flame" size={20} color={(focusLog[today] ?? 0) > 0 ? colors.onPrimary : colors.faint} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+            {currentStreak > 0 ? `${currentStreak}-day streak` : 'Start a streak today'}
+          </Text>
+          <Text style={{ fontSize: 13, color: colors.sub }}>Stats, timeline & rewards</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.faint} />
       </Pressable>
 
       {todaysSessions.length > 0 && (
