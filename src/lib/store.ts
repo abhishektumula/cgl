@@ -184,7 +184,8 @@ export async function hydrate() {
     const saved = await loadData<Partial<AppState>>();
     if (saved) {
       set(() => ({ ...normalize(saved), hydrated: true }));
-      syncLiveTimer(); // re-attach to a timer that kept running while the app was closed
+      // re-attach to a timer that kept running while the app was closed – after the first screen is up
+      setTimeout(syncLiveTimer, 1500);
     } else {
       set(() => ({ ...seed(), hydrated: true }));
       persist();

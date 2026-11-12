@@ -5,8 +5,9 @@
  *  - Expo Go or anything else: a silent notification that says when the timer ends
  * Calls are queued so quick start/pause taps never leave a stale timer behind.
  */
+import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
-import FocusNotification from '../../modules/focus-notification';
+import FocusNotificationModule from '../../modules/focus-notification';
 import { dismissStaticLiveTimer, presentStaticLiveTimer } from '../lib/notifications';
 import type { TimerActivityProps } from './types';
 
@@ -21,10 +22,15 @@ type Activity = {
   end: (policy?: 'default' | 'immediate', props?: TimerActivityProps, contentDate?: Date) => Promise<void>;
 };
 
+/** Expo Go has neither our Android module nor expo-widgets – never touch them there. */
+const inExpoGo = isRunningInExpoGo();
+const FocusNotification = inExpoGo ? null : FocusNotificationModule;
+
 let factory: Factory | null = null;
 let factoryLoaded = false;
+/** Loads the Live Activity code (and @expo/ui) only the first time a timer is actually shown. */
 function activityFactory(): Factory | null {
-  if (!factoryLoaded && Platform.OS === 'ios') {
+  if (!factoryLoaded && Platform.OS === 'ios' && !inExpoGo) {
     factoryLoaded = true;
     try {
       // lazy: throws in Expo Go, where the expo-widgets native module isn't bundled
@@ -38,6 +44,8 @@ function activityFactory(): Factory | null {
 }
 
 let activity: Activity | null = null;
+/** whether this app session may have something on screen outside the app */
+let shown = false;
 let queue: Promise<unknown> = Promise.resolve();
 const enqueue = (job: () => Promise<unknown>) => {
   queue = queue.then(job).catch((e) => console.warn('live timer', e));
@@ -58,7 +66,9 @@ export function showLiveTimer(info: LiveTimerInfo) {
   return enqueue(async () => {
     const paused = info.pausedAt > 0;
     const remaining = info.endAt - (paused ? info.pausedAt : Date.now());
-    if (remaining <= 0) return hideNow();
+    // the round ended while the app was closed – clear whatever is still on the lock screen
+    if (remaining <= 0) return hideNow(true);
+    shown = true;
 
     if (Platform.OS === 'android' && FocusNotification) {
       await FocusNotification.show({
@@ -90,7 +100,10 @@ export function showLiveTimer(info: LiveTimerInfo) {
   });
 }
 
-async function hideNow() {
+async function hideNow(force = false) {
+  // nothing was shown since launch: skip, so app start never loads the native timer code
+  if (!shown && !force) return;
+  shown = false;
   if (Platform.OS === 'android' && FocusNotification) {
     await FocusNotification.hide();
     return;
