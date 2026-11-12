@@ -23,12 +23,13 @@ The live lock-screen timer needs native code, so it only works in a **developmen
 - **Tasks** – subjects as folders (color + icon), plus a **General** folder for anything else. Tasks (topics) have priority, optional deadline, notes and **subtasks** (each with its own priority/deadline). A task auto-completes when all subtasks are done. Long-press a task (or use "Move") to move it to another subject. Search across everything.
 - **Plan** – month calendar; schedule study sessions (time, duration, subject, linked topic) with **notifications** before / at start. One-tap **spaced revision plan** (+1, +3, +7, +21 days) from any task.
 - **Focus** – Pomodoro timer (default 45 min focus / 10 min break / 25 min long break, configurable), keeps the screen awake, notifies when done, break suggestions, 7-day study chart.
-  - **Timer styles** – Ring, Bloom (petals open as you study), Liquid (the cup fills up), Flip clock, Orbit. Pick one under the timer.
+  - **Timer styles** – Halo (glowing ring, ticks sweep every minute), Aurora (drifting northern lights), Heart (fills up and beats), Bloom (petals open as you study), Liquid (the glass fills, bubbles rise), Galaxy (planets orbit, stars twinkle), Flip clock. Pick one under the timer.
   - **Live timer** – while it runs, the countdown ticks in the notification shade and on the lock screen (Android ongoing notification, iPhone Live Activity / Dynamic Island). Turn off in Focus → ⚙︎ → *Show on lock screen*.
 - **Resources** – save YouTube videos/playlists, websites, Telegram channels, books, or **attach PDFs/images from the phone**; filter by subject/type, star favourites.
 - **Mock tests** – log scores, see average/best and trend.
 - **Breathe** – guided 1-minute box-breathing exercise.
-- **Themes** – Sage, Baby pink, Sakura, Lavender, Peach and Sky, each with a light and dark version (Settings → Theme). Dark mode follows the phone by default.
+- **Themes** – Baby pink, Sakura, Cotton candy, Berry, Lavender, Peach, Butter, Mint, Sage, Sky and Midnight (always dark), each with a light and dark version (Settings → Theme). Dark mode follows the phone by default.
+- **App icons** – 8 icons to pick from in Settings → App icon (installed builds only, not Expo Go). Redraw them with `node scripts/make-icons.mjs` (needs `rsvg-convert` and ImageMagick).
 
 ## Gestures
 
@@ -54,7 +55,8 @@ From there you can copy the data as JSON, share it as text, save it as a `.json`
 - `app/` – screens (expo-router)
 - `src/lib/store.ts` – app state + all actions
 - `src/lib/storage.ts` – local file storage (expo-file-system)
-- `src/components/TimerFaces.tsx` – the timer styles
+- `src/components/TimerFaces.tsx` – list of timer styles; the faces live in `src/components/timer/`
+- `src/lib/appIcon.ts` – app icon switching (`expo-alternate-app-icons`)
 - `src/live/` – lock-screen timer (iOS Live Activity + bridge); `modules/focus-notification/` – Android native countdown notification
 - `src/lib/notifications.ts` – reminders
 - `src/components/` – UI building blocks

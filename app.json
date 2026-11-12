@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#DE6A9C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -32,12 +32,81 @@
       [
         "expo-notifications",
         {
+          "icon": "./assets/notification-icon.png",
           "color": "#E68AAE"
         }
       ],
       "expo-sharing",
       "expo-font",
-      "expo-widgets"
+      "expo-widgets",
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "Sage",
+            "ios": "./assets/icons/Sage.png",
+            "android": {
+              "foregroundImage": "./assets/icons/Sage-foreground.png",
+              "backgroundImage": "./assets/icons/Sage-background.png",
+              "backgroundColor": "#3F7563"
+            }
+          },
+          {
+            "name": "Lavender",
+            "ios": "./assets/icons/Lavender.png",
+            "android": {
+              "foregroundImage": "./assets/icons/Lavender-foreground.png",
+              "backgroundImage": "./assets/icons/Lavender-background.png",
+              "backgroundColor": "#7F69CF"
+            }
+          },
+          {
+            "name": "Peach",
+            "ios": "./assets/icons/Peach.png",
+            "android": {
+              "foregroundImage": "./assets/icons/Peach-foreground.png",
+              "backgroundImage": "./assets/icons/Peach-background.png",
+              "backgroundColor": "#EC8460"
+            }
+          },
+          {
+            "name": "Sky",
+            "ios": "./assets/icons/Sky.png",
+            "android": {
+              "foregroundImage": "./assets/icons/Sky-foreground.png",
+              "backgroundImage": "./assets/icons/Sky-background.png",
+              "backgroundColor": "#4A8FCB"
+            }
+          },
+          {
+            "name": "Bloom",
+            "ios": "./assets/icons/Bloom.png",
+            "android": {
+              "foregroundImage": "./assets/icons/Bloom-foreground.png",
+              "backgroundImage": "./assets/icons/Bloom-background.png",
+              "backgroundColor": "#B58BE8"
+            }
+          },
+          {
+            "name": "Heart",
+            "ios": "./assets/icons/Heart.png",
+            "android": {
+              "foregroundImage": "./assets/icons/Heart-foreground.png",
+              "backgroundImage": "./assets/icons/Heart-background.png",
+              "backgroundColor": "#E0527F"
+            }
+          },
+          {
+            "name": "Midnight",
+            "ios": "./assets/icons/Midnight.png",
+            "android": {
+              "foregroundImage": "./assets/icons/Midnight-foreground.png",
+              "backgroundImage": "./assets/icons/Midnight-background.png",
+              "backgroundColor": "#14162E"
+            }
+          }
+        ]
+      ]
     ],
     "scheme": "prepplanner",
     "extra": {

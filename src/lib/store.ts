@@ -112,7 +112,7 @@ export function useStore<T>(selector: (s: AppState) => T): T {
   return useSyncExternalStore(subscribe, () => selector(state), () => selector(state));
 }
 
-const TIMER_STYLES: TimerStyle[] = ['ring', 'bloom', 'liquid', 'flip', 'orbit'];
+const TIMER_STYLES: TimerStyle[] = ['ring', 'aurora', 'heart', 'bloom', 'liquid', 'flip', 'orbit'];
 
 function normalizeSettings(saved?: Partial<Settings>): Settings {
   const s = { ...defaultSettings, ...saved };

@@ -132,7 +132,7 @@ export default function Focus() {
           />
         </View>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
           {TIMER_STYLES.map((st) => {
             const active = settings.timerStyle === st.id;
             return (

@@ -74,8 +74,10 @@ export interface MockTest {
 }
 
 export type ThemePref = 'system' | 'light' | 'dark';
-export type Palette = 'sage' | 'blush' | 'rose' | 'lavender' | 'peach' | 'sky';
-export type TimerStyle = 'ring' | 'bloom' | 'liquid' | 'flip' | 'orbit';
+export type Palette =
+  | 'sage' | 'blush' | 'rose' | 'lavender' | 'peach' | 'sky'
+  | 'candy' | 'mint' | 'berry' | 'butter' | 'midnight';
+export type TimerStyle = 'ring' | 'aurora' | 'heart' | 'bloom' | 'liquid' | 'flip' | 'orbit';
 
 export interface Settings {
   theme: ThemePref;

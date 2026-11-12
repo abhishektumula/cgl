@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { APP_ICONS, AppIconName, canChangeAppIcon, currentAppIcon, setAppIcon } from '../src/lib/appIcon';
 import { DataSheet } from '../src/components/DataSheet';
 import { DateField } from '../src/components/DateField';
 import { Chip, Divider, Group, Header, layout, Row, SectionLabel, KEYBOARD_DONE_ID, tap } from '../src/components/ui';
@@ -10,7 +11,39 @@ import { getState, resetAllData, updateSettings, useStore } from '../src/lib/sto
 import { PALETTE_ORDER, PALETTES } from '../src/lib/theme';
 import { useColors } from '../src/lib/useTheme';
 
-const EXAMS = ['SSC CGL', 'SSC CHSL', 'UPSC', 'Bank PO', 'RRB NTPC', 'State PSC'];
+function AppIconPicker() {
+  const colors = useColors();
+  const [available] = useState(canChangeAppIcon);
+  const [icon, setIcon] = useState<AppIconName>(currentAppIcon);
+  const choose = async (id: AppIconName) => {
+    tap();
+    if (!available) {
+      Alert.alert('Not available here', 'App icons can be changed in the installed app, not in Expo Go.');
+      return;
+    }
+    if (id === icon) return;
+    if (await setAppIcon(id)) setIcon(id);
+  };
+  return (
+    <Group>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 14, gap: 14 }}>
+        {APP_ICONS.map((a) => {
+          const active = available && icon === a.id;
+          return (
+            <Pressable key={a.id} accessibilityLabel={`${a.label} app icon`} onPress={() => choose(a.id)} style={{ alignItems: 'center', gap: 6 }}>
+              <View style={{ padding: 3, borderRadius: 22, borderWidth: 2, borderColor: active ? colors.primary : 'transparent' }}>
+                <Image source={a.preview} style={{ width: 58, height: 58, borderRadius: 16 }} />
+              </View>
+              <Text style={{ fontSize: 12, color: active ? colors.text : colors.sub, fontWeight: active ? '600' : '400' }}>{a.label}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </Group>
+  );
+}
+
+const EXAMS =['SSC CGL', 'SSC CHSL', 'UPSC', 'Bank PO', 'RRB NTPC', 'State PSC'];
 
 export default function Settings() {
   const colors = useColors();
@@ -81,6 +114,9 @@ export default function Settings() {
               label={t === 'system' ? 'Auto' : t[0].toUpperCase() + t.slice(1)} active={settings.theme === t} onPress={() => updateSettings({ theme: t })} />
           ))}
         </View>
+
+        <SectionLabel>App icon</SectionLabel>
+        <AppIconPicker />
 
         <SectionLabel>You</SectionLabel>
         <Group>

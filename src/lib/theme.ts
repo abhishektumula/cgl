@@ -123,9 +123,67 @@ export const PALETTES: Record<Palette, { name: string; light: Colors; dark: Colo
       primary: '#8CBFEA', primarySoft: '#1B2B3A', calm: '#A6D8C8', calmSoft: '#1C2D28', muted: '#1F2832',
     }),
   },
+  candy: {
+    name: 'Cotton candy',
+    light: light({
+      bg: '#FDF7FF', card: '#FFFFFF', text: '#33263F', sub: '#8E7C9E', faint: '#CDBFDA', border: '#F1E6F8',
+      primary: '#EE8FC4', primarySoft: '#FDE8F4', calm: '#7FC4EE', calmSoft: '#E4F3FC', muted: '#F8EEFC',
+    }),
+    dark: dark({
+      bg: '#17121C', card: '#211A28', text: '#F5EAFB', sub: '#B9A4C8', faint: '#64536F', border: '#30263A',
+      primary: '#F7A9D4', primarySoft: '#3B2236', calm: '#9AD3F5', calmSoft: '#1D2C38', muted: '#2A2131',
+    }),
+  },
+  mint: {
+    name: 'Mint',
+    light: light({
+      bg: '#F4FBF8', card: '#FFFFFF', text: '#1F302A', sub: '#728C83', faint: '#B4CCC3', border: '#E2F1EB',
+      primary: '#4DBF9C', primarySoft: '#E0F5EE', calm: '#F49FB6', calmSoft: '#FDEAF0', muted: '#EBF6F1',
+    }),
+    dark: dark({
+      bg: '#101816', card: '#17221F', text: '#E4F4EE', sub: '#93B1A6', faint: '#4D6760', border: '#22312C',
+      primary: '#78D8B9', primarySoft: '#183229', calm: '#F7B3C6', calmSoft: '#3A222A', muted: '#1C2925',
+    }),
+  },
+  berry: {
+    name: 'Berry',
+    light: light({
+      bg: '#FCF6F9', card: '#FFFFFF', text: '#35192A', sub: '#91687E', faint: '#D2B1C2', border: '#F4E1EA',
+      primary: '#B5487E', primarySoft: '#F8E1EC', calm: '#8A6FD1', calmSoft: '#ECE6FA', muted: '#F8ECF2',
+    }),
+    dark: dark({
+      bg: '#170F14', card: '#22161D', text: '#F7E5EE', sub: '#BE96AA', faint: '#6B4A5B', border: '#34212B',
+      primary: '#E27BAE', primarySoft: '#3F1E2F', calm: '#AE98EE', calmSoft: '#272038', muted: '#2B1D24',
+    }),
+  },
+  butter: {
+    name: 'Butter',
+    light: light({
+      bg: '#FFFBF0', card: '#FFFFFF', text: '#33291A', sub: '#958664', faint: '#D8CCAE', border: '#F6EDD6',
+      primary: '#E2A93B', primarySoft: '#FCF0D5', calm: '#E98C8C', calmSoft: '#FCE6E6', muted: '#FAF3E1',
+    }),
+    dark: dark({
+      bg: '#17140D', card: '#211D13', text: '#F7EFDB', sub: '#BCAE8C', faint: '#665C45', border: '#322B1D',
+      primary: '#F2C46B', primarySoft: '#3A2F17', calm: '#F2A9A9', calmSoft: '#3A2323', muted: '#29241A',
+    }),
+  },
+  midnight: {
+    name: 'Midnight',
+    // a night-sky theme: dark even when the phone is in light mode
+    light: dark({
+      bg: '#14162E', card: '#1D2040', text: '#ECEBFA', sub: '#A3A5CC', faint: '#5C5F8A', border: '#2A2E55',
+      primary: '#F7D98B', primarySoft: '#3A3550', calm: '#A99CF0', calmSoft: '#2A2850', muted: '#22264A',
+    }),
+    dark: dark({
+      bg: '#0C0D1C', card: '#15172D', text: '#ECEBFA', sub: '#9C9EC6', faint: '#535680', border: '#22254A',
+      primary: '#F7D98B', primarySoft: '#332F48', calm: '#A99CF0', calmSoft: '#25234A', muted: '#1B1E3D',
+    }),
+  },
 };
 
-export const PALETTE_ORDER: Palette[] = ['sage', 'blush', 'rose', 'lavender', 'peach', 'sky'];
+export const PALETTE_ORDER: Palette[] = [
+  'blush', 'rose', 'candy', 'berry', 'lavender', 'peach', 'butter', 'mint', 'sage', 'sky', 'midnight',
+];
 
 export const lightColors = PALETTES.sage.light;
 export const darkColors = PALETTES.sage.dark;
