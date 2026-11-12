@@ -74,9 +74,15 @@ export interface MockTest {
 }
 
 export type ThemePref = 'system' | 'light' | 'dark';
+export type Palette = 'sage' | 'blush' | 'rose' | 'lavender' | 'peach' | 'sky';
+export type TimerStyle = 'ring' | 'bloom' | 'liquid' | 'flip' | 'orbit';
 
 export interface Settings {
   theme: ThemePref;
+  palette: Palette;
+  timerStyle: TimerStyle;
+  /** show a live countdown in the notification shade / lock screen while the timer runs */
+  liveTimer: boolean;
   showCountdown: boolean;
   userName: string;
   examName: string;
@@ -101,6 +107,8 @@ export interface TimerState {
   round: number; // completed focus rounds in current cycle
   subjectId: string | null;
   notificationId?: string;
+  /** focus milliseconds already studied but not yet credited as a whole minute */
+  carryMs?: number;
 }
 
 export interface AppState {

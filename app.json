@@ -18,7 +18,10 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.prepplanner.app"
+      "package": "com.prepplanner.app",
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -29,11 +32,12 @@
       [
         "expo-notifications",
         {
-          "color": "#5B5BD6"
+          "color": "#E68AAE"
         }
       ],
       "expo-sharing",
-      "expo-font"
+      "expo-font",
+      "expo-widgets"
     ],
     "scheme": "prepplanner",
     "extra": {

@@ -86,7 +86,7 @@ export default function Plan() {
         subtitle={cursor.y !== new Date().getFullYear() ? String(cursor.y) : undefined}
         right={
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {(selected !== today || cursor.m !== new Date().getMonth()) && (
+            {(selected !== today || cursor.m !== new Date().getMonth() || cursor.y !== new Date().getFullYear()) && (
               <Pressable onPress={() => goTo(today)} hitSlop={8} style={{ paddingHorizontal: 8 }}>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>Today</Text>
               </Pressable>

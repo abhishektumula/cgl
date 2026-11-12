@@ -128,7 +128,7 @@ export default function TaskScreen() {
             submitBehavior="blurAndSubmit"
             returnKeyType="done"
             keyboardAppearance={colors.dark ? 'dark' : 'light'} inputAccessoryViewID={KEYBOARD_DONE_ID}
-            style={{ flex: 1, fontSize: 26, fontWeight: '700', color: task.done ? colors.sub : colors.text, letterSpacing: -0.3 }}
+            style={{ flex: 1, fontSize: 26, fontWeight: '600', color: task.done ? colors.sub : colors.text, letterSpacing: -0.3 }}
           />
         </View>
 

@@ -61,7 +61,7 @@ export default function Today() {
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={{ fontSize: 14, color: colors.sub }}>{formatLongDate(today)}</Text>
-          <Text style={{ fontSize: 30, fontWeight: '700', color: colors.text, letterSpacing: -0.5 }}>
+          <Text style={{ fontSize: 28, fontWeight: '600', color: colors.text, letterSpacing: -0.4 }}>
             {greeting()}{settings.userName ? `, ${settings.userName}` : ''}
           </Text>
           {!!line && <Text style={{ fontSize: 14, color: colors.sub }}>{line}</Text>}
@@ -72,12 +72,12 @@ export default function Today() {
       <Pressable
         onPress={() => router.push('/focus')}
         style={({ pressed }) => ({
-          marginTop: 8, padding: 18, borderRadius: 18, backgroundColor: colors.primarySoft, gap: 12, opacity: pressed ? 0.85 : 1,
+          marginTop: 8, padding: 18, borderRadius: 22, backgroundColor: colors.primarySoft, gap: 12, opacity: pressed ? 0.85 : 1,
         })}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 26, fontWeight: '700', color: colors.text }}>{formatMinutes(minutes)}</Text>
+            <Text style={{ fontSize: 26, fontWeight: '600', color: colors.text }}>{formatMinutes(minutes)}</Text>
             <Text style={{ fontSize: 13, color: colors.sub }}>studied today</Text>
           </View>
           <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>

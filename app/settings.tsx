@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Alert, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { DataSheet } from '../src/components/DataSheet';
 import { DateField } from '../src/components/DateField';
-import { Chip, Divider, Group, Header, layout, Row, SectionLabel, KEYBOARD_DONE_ID } from '../src/components/ui';
+import { Chip, Divider, Group, Header, layout, Row, SectionLabel, KEYBOARD_DONE_ID, tap } from '../src/components/ui';
 import { formatMinutes } from '../src/lib/dates';
 import { formatBytes, storageUsage } from '../src/lib/storage';
 import { getState, resetAllData, updateSettings, useStore } from '../src/lib/store';
+import { PALETTE_ORDER, PALETTES } from '../src/lib/theme';
 import { useColors } from '../src/lib/useTheme';
 
 const EXAMS = ['SSC CGL', 'SSC CHSL', 'UPSC', 'Bank PO', 'RRB NTPC', 'State PSC'];
@@ -16,7 +17,15 @@ export default function Settings() {
   const settings = useStore((s) => s.settings);
   const [name, setName] = useState(settings.userName);
   const [exam, setExam] = useState(settings.examName);
-  const usage = (() => { try { return storageUsage(); } catch { return null; } })();
+  // reads the files folder – do it once, not on every keystroke
+  const [usage] = useState(() => { try { return storageUsage(); } catch { return null; } });
+  // follow the store if it changes elsewhere (import / erase)
+  const [seen, setSeen] = useState({ name: settings.userName, exam: settings.examName });
+  if (seen.name !== settings.userName || seen.exam !== settings.examName) {
+    setSeen({ name: settings.userName, exam: settings.examName });
+    setName(settings.userName);
+    setExam(settings.examName);
+  }
 
   const inputStyle = { flex: 1, fontSize: 16, color: colors.text, textAlign: 'right' as const, paddingVertical: 0 };
   const labelStyle = { fontSize: 16, color: colors.text };
@@ -33,6 +42,46 @@ export default function Settings() {
     <View style={{ flex: 1 }}>
       <Header back title="Settings" />
       <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
+        <SectionLabel>Theme</SectionLabel>
+        <Group>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingVertical: 14, paddingHorizontal: 8 }}>
+            {PALETTE_ORDER.map((id) => {
+              const p = PALETTES[id][colors.dark ? 'dark' : 'light'];
+              const active = settings.palette === id;
+              return (
+                <Pressable
+                  key={id}
+                  accessibilityLabel={`${PALETTES[id].name} theme`}
+                  onPress={() => { tap(); updateSettings({ palette: id }); }}
+                  style={{ width: '33.33%', alignItems: 'center', gap: 6, paddingVertical: 8 }}
+                >
+                  <View style={{
+                    width: 52, height: 52, borderRadius: 26, padding: 3,
+                    borderWidth: 2, borderColor: active ? p.primary : 'transparent',
+                  }}>
+                    <View style={{ flex: 1, borderRadius: 23, overflow: 'hidden', backgroundColor: p.bg, flexDirection: 'row' }}>
+                      <View style={{ flex: 1, backgroundColor: p.primary }} />
+                      <View style={{ flex: 1, backgroundColor: p.calm }} />
+                    </View>
+                    {active && (
+                      <View style={{ position: 'absolute', right: -2, bottom: -2, width: 20, height: 20, borderRadius: 10, backgroundColor: p.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.card }}>
+                        <Ionicons name="checkmark" size={11} color="#fff" />
+                      </View>
+                    )}
+                  </View>
+                  <Text style={{ fontSize: 13, color: active ? colors.text : colors.sub, fontWeight: active ? '600' : '400' }}>{PALETTES[id].name}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Group>
+        <View style={layout.row}>
+          {(['system', 'light', 'dark'] as const).map((t) => (
+            <Chip key={t} icon={t === 'system' ? 'phone-portrait-outline' : t === 'light' ? 'sunny-outline' : 'moon-outline'}
+              label={t === 'system' ? 'Auto' : t[0].toUpperCase() + t.slice(1)} active={settings.theme === t} onPress={() => updateSettings({ theme: t })} />
+          ))}
+        </View>
+
         <SectionLabel>You</SectionLabel>
         <Group>
           <Row>
@@ -66,13 +115,6 @@ export default function Settings() {
         <SectionLabel>Daily goal</SectionLabel>
         <View style={layout.row}>
           {[120, 240, 360, 480].map((m) => <Chip key={m} label={formatMinutes(m)} active={settings.dailyGoalMin === m} onPress={() => updateSettings({ dailyGoalMin: m })} />)}
-        </View>
-
-        <SectionLabel>Appearance</SectionLabel>
-        <View style={layout.row}>
-          {(['system', 'light', 'dark'] as const).map((t) => (
-            <Chip key={t} label={t[0].toUpperCase() + t.slice(1)} active={settings.theme === t} onPress={() => updateSettings({ theme: t })} />
-          ))}
         </View>
 
         <SectionLabel>Reminders</SectionLabel>

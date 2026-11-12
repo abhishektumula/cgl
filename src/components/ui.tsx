@@ -40,7 +40,7 @@ export function Header({ title, subtitle, back, right, color }: {
       )}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         {color && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />}
-        <Text style={{ flex: 1, fontSize: 30, fontWeight: '700', color: colors.text, letterSpacing: -0.5 }} numberOfLines={1}>{title}</Text>
+        <Text style={{ flex: 1, fontSize: 28, fontWeight: '600', color: colors.text, letterSpacing: -0.4 }} numberOfLines={1}>{title}</Text>
         {right}
       </View>
       {!!subtitle && <Text style={{ fontSize: 14, color: colors.sub }}>{subtitle}</Text>}
@@ -53,10 +53,7 @@ export function Header({ title, subtitle, back, right, color }: {
 export function Group({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const colors = useColors();
   return (
-    <View style={[{
-      backgroundColor: colors.card, borderRadius: radius, overflow: 'hidden',
-      borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
-    }, style]}>
+    <View style={[{ backgroundColor: colors.card, borderRadius: radius, overflow: 'hidden' }, style]}>
       {children}
     </View>
   );
@@ -91,7 +88,7 @@ export function SectionLabel({ children, right }: { children: ReactNode; right?:
   const colors = useColors();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, marginBottom: 2, paddingHorizontal: 4 }}>
-      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.sub }}>{children}</Text>
+      <Text style={{ fontSize: 13, fontWeight: '500', color: colors.sub, letterSpacing: 0.2 }}>{children}</Text>
       {right}
     </View>
   );
@@ -143,13 +140,13 @@ export function Fab({ onPress, icon = 'add' }: { onPress: () => void; icon?: Ico
     <Pressable
       onPress={() => { tap(); onPress(); }}
       style={({ pressed }) => ({
-        position: 'absolute', right: 20, bottom: 24, width: 56, height: 56, borderRadius: 28,
+        position: 'absolute', right: 20, bottom: 24, width: 54, height: 54, borderRadius: 27,
         backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
         transform: [{ scale: pressed ? 0.94 : 1 }],
-        shadowColor: colors.shadow, shadowOpacity: colors.dark ? 0 : 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4,
+        shadowColor: colors.primary, shadowOpacity: colors.dark ? 0 : 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3,
       })}
     >
-      <Ionicons name={icon} size={28} color={colors.onPrimary} />
+      <Ionicons name={icon} size={26} color={colors.onPrimary} />
     </Pressable>
   );
 }
@@ -268,7 +265,7 @@ export function Input(props: TextInputProps & { label?: string }) {
 
 export function Label({ children }: { children: ReactNode }) {
   const colors = useColors();
-  return <Text style={{ fontSize: 13, fontWeight: '600', color: colors.sub }}>{children}</Text>;
+  return <Text style={{ fontSize: 13, fontWeight: '500', color: colors.sub }}>{children}</Text>;
 }
 
 export function EmptyState({ icon, title, action }: { icon: IconName; title: string; action?: ReactNode }) {
@@ -312,7 +309,6 @@ export function Sheet({ visible, onClose, title, children, footer }: {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [drag] = useState(() => new RNAnimated.Value(0));
-
   const close = () => {
     Keyboard.dismiss();
     onClose();
@@ -339,14 +335,14 @@ export function Sheet({ visible, onClose, title, children, footer }: {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <Pressable style={{ flex: 1, minHeight: 60, backgroundColor: colors.backdrop }} onPress={close} />
         <RNAnimated.View style={{
-          backgroundColor: colors.card, borderTopLeftRadius: 22, borderTopRightRadius: 22,
+          backgroundColor: colors.card, borderTopLeftRadius: 26, borderTopRightRadius: 26,
           paddingHorizontal: 20, maxHeight: '88%', paddingBottom: Math.max(insets.bottom, 16),
           transform: [{ translateY: drag }],
         }}>
           <View {...pan.panHandlers} style={{ paddingTop: 10, paddingBottom: 6 }}>
             <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: 10 }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 32 }}>
-              <Text style={{ flex: 1, fontSize: 18, fontWeight: '700', color: colors.text }} numberOfLines={1}>{title ?? ''}</Text>
+              <Text style={{ flex: 1, fontSize: 18, fontWeight: '600', color: colors.text }} numberOfLines={1}>{title ?? ''}</Text>
               <Pressable
                 hitSlop={12}
                 onPress={close}
@@ -394,12 +390,12 @@ export function Toast() {
     >
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 999,
-        backgroundColor: colors.dark ? '#EAE9E4' : '#2A2A28',
+        backgroundColor: colors.text,
       }}>
-        <Text style={{ color: colors.dark ? '#1D1D1B' : '#F7F6F3', fontSize: 14 }}>{toast.message}</Text>
+        <Text style={{ color: colors.bg, fontSize: 14 }}>{toast.message}</Text>
         {toast.undo && (
           <Pressable hitSlop={10} onPress={undoToast}>
-            <Text style={{ color: colors.dark ? colors.onPrimary : '#A9D1C2', fontWeight: '700', fontSize: 14 }}>Undo</Text>
+            <Text style={{ color: colors.primarySoft, fontWeight: '700', fontSize: 14 }}>Undo</Text>
           </Pressable>
         )}
       </View>

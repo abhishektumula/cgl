@@ -6,17 +6,21 @@ import {
   scheduleSessionNotifications,
   scheduleTimerEnd,
 } from './notifications';
+import { hideLiveTimer, showLiveTimer } from '../live/liveTimer';
 import { deleteStoredFile, loadData, saveData } from './storage';
 import { showToast } from './toast';
-import { SUBJECT_COLORS } from './theme';
+import { PALETTES, SUBJECT_COLORS } from './theme';
 import {
-  AppState, MockTest, Priority, Resource, Session, Settings, Subject, Subtask, Task, TimerMode,
+  AppState, MockTest, Priority, Resource, Session, Settings, Subject, Subtask, Task, TimerMode, TimerStyle,
 } from './types';
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 const defaultSettings: Settings = {
   theme: 'system',
+  palette: 'sage',
+  timerStyle: 'ring',
+  liveTimer: true,
   showCountdown: true,
   userName: '',
   examName: 'SSC CGL',
@@ -108,6 +112,15 @@ export function useStore<T>(selector: (s: AppState) => T): T {
   return useSyncExternalStore(subscribe, () => selector(state), () => selector(state));
 }
 
+const TIMER_STYLES: TimerStyle[] = ['ring', 'bloom', 'liquid', 'flip', 'orbit'];
+
+function normalizeSettings(saved?: Partial<Settings>): Settings {
+  const s = { ...defaultSettings, ...saved };
+  if (!PALETTES[s.palette]) s.palette = defaultSettings.palette;
+  if (!TIMER_STYLES.includes(s.timerStyle)) s.timerStyle = defaultSettings.timerStyle;
+  return s;
+}
+
 /** Fill in missing fields so older / imported files never crash the app. */
 function normalize(saved: Partial<AppState>): Omit<AppState, 'hydrated'> {
   return {
@@ -117,7 +130,7 @@ function normalize(saved: Partial<AppState>): Omit<AppState, 'hydrated'> {
     resources: saved.resources ?? [],
     mocks: saved.mocks ?? [],
     focusLog: saved.focusLog ?? {},
-    settings: { ...defaultSettings, ...saved.settings },
+    settings: normalizeSettings(saved.settings),
     timer: saved.timer ?? state.timer,
   };
 }
@@ -159,6 +172,7 @@ export async function importData(data: Partial<AppState>) {
   next.sessions = next.sessions.map((s) => ({ ...s, notificationIds: [] }));
   next.settings = { ...next.settings, dailyReminder: false, dailyReminderId: undefined };
   set(() => next);
+  syncLiveTimer();
   // re-create reminders for upcoming sessions on this device
   for (const s of next.sessions) {
     if (!s.done) await saveSession(s);
@@ -170,6 +184,7 @@ export async function hydrate() {
     const saved = await loadData<Partial<AppState>>();
     if (saved) {
       set(() => ({ ...normalize(saved), hydrated: true }));
+      syncLiveTimer(); // re-attach to a timer that kept running while the app was closed
     } else {
       set(() => ({ ...seed(), hydrated: true }));
       persist();
@@ -399,11 +414,14 @@ export async function updateSettings(patch: Partial<Settings>) {
     if (next.dailyReminder && !next.dailyReminderId) next.dailyReminder = false;
   }
   set((st) => {
-    const timer = !st.timer.running && st.timer.mode === 'focus' && st.timer.remainingMs === st.settings.focusMin * 60000
-      ? { ...st.timer, remainingMs: next.focusMin * 60000 }
-      : st.timer;
+    // an untouched (full) timer follows the new length right away
+    const t = st.timer;
+    const timer = !t.running && t.remainingMs === modeMinutes(t.mode, st.settings) * 60000
+      ? { ...t, remainingMs: modeMinutes(t.mode, next) * 60000 }
+      : t;
     return { settings: next, timer };
   });
+  if ('liveTimer' in patch || 'palette' in patch) syncLiveTimer();
 }
 
 export async function resetAllData() {
@@ -418,6 +436,7 @@ export async function resetAllData() {
     settings: defaultSettings,
     timer: { mode: 'focus', running: false, remainingMs: defaultSettings.focusMin * 60000, round: 0, subjectId: null },
   }));
+  hideLiveTimer();
 }
 
 /* ---------------- Pomodoro timer ---------------- */
@@ -428,65 +447,112 @@ export const modeMinutes = (mode: TimerMode, s: Settings = state.settings) =>
 export const timerRemaining = (t = state.timer) =>
   t.running && t.endAt ? Math.max(0, t.endAt - Date.now()) : t.remainingMs;
 
+/** Total length of the current round (never shorter than what is left, e.g. after changing the preset mid-round). */
+export const timerTotal = (t = state.timer, s: Settings = state.settings) => Math.max(modeMinutes(t.mode, s) * 60000, t.remainingMs);
+
+const TIMER_TITLE: Record<TimerMode, string> = { focus: 'Focus', short: 'Short break', long: 'Long break' };
+
+/** Mirror the timer in the notification shade / Lock Screen (or remove it there). */
+export function syncLiveTimer() {
+  const t = state.timer;
+  const s = state.settings;
+  const total = timerTotal(t);
+  const started = t.running || t.remainingMs < total;
+  if (!s.liveTimer || !started) {
+    hideLiveTimer();
+    return;
+  }
+  const subject = t.mode === 'focus' ? state.subjects.find((x) => x.id === t.subjectId)?.name : undefined;
+  const palette = PALETTES[s.palette] ?? PALETTES.sage;
+  const now = Date.now();
+  showLiveTimer({
+    mode: t.mode,
+    title: subject ? `${TIMER_TITLE[t.mode]} · ${subject}` : TIMER_TITLE[t.mode],
+    subtitle: t.mode === 'focus' ? `Round ${Math.min(t.round + 1, s.roundsBeforeLong)} of ${s.roundsBeforeLong}` : 'Rest your eyes',
+    endAt: t.running && t.endAt ? t.endAt : now + t.remainingMs,
+    totalMs: total,
+    pausedAt: t.running ? 0 : now,
+    color: t.mode === 'focus' ? palette.light.primary : palette.light.calm,
+  });
+}
+
+/** Add studied focus time to today. Seconds are carried over so pausing often never loses (or invents) minutes. */
+function creditFocus(ms: number) {
+  const totalMs = (state.timer.carryMs ?? 0) + Math.max(0, ms);
+  const mins = Math.floor(totalMs / 60000);
+  const key = todayKey();
+  set((st) => ({
+    focusLog: mins > 0 ? { ...st.focusLog, [key]: (st.focusLog[key] ?? 0) + mins } : st.focusLog,
+    timer: { ...st.timer, carryMs: totalMs - mins * 60000 },
+  }));
+}
+
+/** Credit focus time studied since the last start (used when pausing / skipping / resetting / switching mode). */
+function logFocus(t = state.timer) {
+  if (t.mode !== 'focus' || !t.running) return;
+  // while running, remainingMs holds the value captured at start
+  creditFocus(t.remainingMs - timerRemaining(t));
+}
+
 export async function startTimer() {
   const t = state.timer;
   if (t.running) return;
-  const endAt = Date.now() + t.remainingMs;
-  set((st) => ({ timer: { ...st.timer, running: true, endAt } }));
+  const remainingMs = t.remainingMs > 0 ? t.remainingMs : modeMinutes(t.mode) * 60000;
+  const endAt = Date.now() + remainingMs;
+  set((st) => ({ timer: { ...st.timer, running: true, endAt, remainingMs, notificationId: undefined } }));
+  syncLiveTimer();
   const notificationId = await scheduleTimerEnd(endAt, t.mode);
-  set((st) => ({ timer: { ...st.timer, notificationId } }));
+  // paused / reset / skipped while we were scheduling → that alert must not fire later
+  if (state.timer.running && state.timer.endAt === endAt) {
+    set((st) => ({ timer: { ...st.timer, notificationId } }));
+    // the very first start also asked for notification permission – show the live timer now that we may post
+    syncLiveTimer();
+  } else cancelNotifications([notificationId]);
 }
 
 export async function pauseTimer() {
   const t = state.timer;
   if (!t.running) return;
-  await cancelNotifications([t.notificationId]);
   logFocus(t);
   set((st) => ({ timer: { ...st.timer, running: false, endAt: undefined, remainingMs: timerRemaining(t), notificationId: undefined } }));
-}
-
-/** Credit focus minutes studied since the last start (used when pausing / skipping / resetting). */
-function logFocus(t = state.timer) {
-  if (t.mode !== 'focus' || !t.running) return;
-  // while running, remainingMs holds the value captured at start
-  const mins = Math.round(Math.max(0, t.remainingMs - timerRemaining(t)) / 60000);
-  if (mins <= 0) return;
-  const key = todayKey();
-  set((st) => ({ focusLog: { ...st.focusLog, [key]: (st.focusLog[key] ?? 0) + mins } }));
+  syncLiveTimer();
+  await cancelNotifications([t.notificationId]);
 }
 
 export function setTimerMode(mode: TimerMode) {
   const t = state.timer;
-  cancelNotifications([t.notificationId]);
+  logFocus(t);
   set((st) => ({
     timer: { ...st.timer, mode, running: false, endAt: undefined, notificationId: undefined, remainingMs: modeMinutes(mode) * 60000 },
   }));
+  syncLiveTimer();
+  cancelNotifications([t.notificationId]);
 }
 
 export function setTimerSubject(subjectId: string | null) {
   set((st) => ({ timer: { ...st.timer, subjectId } }));
+  if (state.timer.running) syncLiveTimer();
 }
 
 export async function resetTimer() {
   const t = state.timer;
-  if (t.running) logFocus(t);
-  await cancelNotifications([t.notificationId]);
+  logFocus(t);
   set((st) => ({
     timer: { ...st.timer, running: false, endAt: undefined, notificationId: undefined, remainingMs: modeMinutes(st.timer.mode) * 60000 },
   }));
+  syncLiveTimer();
+  await cancelNotifications([t.notificationId]);
 }
 
 /** Called when the countdown reaches zero (or user skips). Returns the next mode. */
 export function completeTimer(skipped = false): TimerMode {
   const t = state.timer;
   if (skipped) {
-    if (t.running) logFocus(t);
+    logFocus(t);
     cancelNotifications([t.notificationId]);
   } else if (t.mode === 'focus') {
-    // full session: credit the minutes since last start
-    const mins = Math.round(t.remainingMs / 60000);
-    const key = todayKey();
-    set((st) => ({ focusLog: { ...st.focusLog, [key]: (st.focusLog[key] ?? 0) + mins } }));
+    // the whole round ran out: credit what was left at the last start
+    creditFocus(t.remainingMs);
   }
   let next: TimerMode = 'focus';
   let round = t.round;
@@ -501,6 +567,7 @@ export function completeTimer(skipped = false): TimerMode {
       remainingMs: modeMinutes(next) * 60000,
     },
   }));
+  syncLiveTimer();
   return next;
 }
 

@@ -6,6 +6,7 @@ import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { TimerRunner } from '../src/components/TimerRunner';
 import { KeyboardDoneBar, Toast } from '../src/components/ui';
 import { setupNotifications } from '../src/lib/notifications';
 import { flushSave, hydrate, useStore } from '../src/lib/store';
@@ -41,7 +42,10 @@ export default function RootLayout() {
     if (!hydrated) return;
     const open = (r: Notifications.NotificationResponse | null) => {
       const url = r?.notification.request.content.data?.url;
-      if (typeof url === 'string') setTimeout(() => router.push(url as any), 50);
+      if (typeof url !== 'string') return;
+      // forget it once handled – otherwise every later cold start would jump to this screen again
+      Notifications.clearLastNotificationResponseAsync().catch(() => {});
+      setTimeout(() => router.navigate(url as any), 50);
     };
     open(Notifications.getLastNotificationResponse());
     const sub = Notifications.addNotificationResponseReceivedListener(open);
@@ -62,6 +66,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="breathe" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
             </Stack>
+            <TimerRunner />
           </ThemeProvider>
         )}
         <Toast />

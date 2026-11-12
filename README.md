@@ -13,16 +13,22 @@ npx expo start
 Scan the QR code with **Expo Go** (iPhone: Camera app · Android: Expo Go app). Phone and laptop must be on the same Wi-Fi
 (otherwise use `npx expo start --tunnel`).
 
+The live lock-screen timer needs native code, so it only works in a **development or EAS build**
+(`eas build --profile development` or `--profile preview`). In Expo Go the app still works and shows a plain
+"ends at …" notification instead.
+
 ## Features
 
 - **Today** – exam countdown, today's schedule, overdue / due / high-priority tasks, study minutes vs daily goal, streak, quote of the day, "Feeling stressed?" breathing break.
 - **Tasks** – subjects as folders (color + icon), plus a **General** folder for anything else. Tasks (topics) have priority, optional deadline, notes and **subtasks** (each with its own priority/deadline). A task auto-completes when all subtasks are done. Long-press a task (or use "Move") to move it to another subject. Search across everything.
 - **Plan** – month calendar; schedule study sessions (time, duration, subject, linked topic) with **notifications** before / at start. One-tap **spaced revision plan** (+1, +3, +7, +21 days) from any task.
 - **Focus** – Pomodoro timer (default 45 min focus / 10 min break / 25 min long break, configurable), keeps the screen awake, notifies when done, break suggestions, 7-day study chart.
+  - **Timer styles** – Ring, Bloom (petals open as you study), Liquid (the cup fills up), Flip clock, Orbit. Pick one under the timer.
+  - **Live timer** – while it runs, the countdown ticks in the notification shade and on the lock screen (Android ongoing notification, iPhone Live Activity / Dynamic Island). Turn off in Focus → ⚙︎ → *Show on lock screen*.
 - **Resources** – save YouTube videos/playlists, websites, Telegram channels, books, or **attach PDFs/images from the phone**; filter by subject/type, star favourites.
 - **Mock tests** – log scores, see average/best and trend.
 - **Breathe** – guided 1-minute box-breathing exercise.
-- **Dark mode** – follows the phone by default; force Light or Dark in Settings → Appearance.
+- **Themes** – Sage, Baby pink, Sakura, Lavender, Peach and Sky, each with a light and dark version (Settings → Theme). Dark mode follows the phone by default.
 
 ## Gestures
 
@@ -48,5 +54,7 @@ From there you can copy the data as JSON, share it as text, save it as a `.json`
 - `app/` – screens (expo-router)
 - `src/lib/store.ts` – app state + all actions
 - `src/lib/storage.ts` – local file storage (expo-file-system)
+- `src/components/TimerFaces.tsx` – the timer styles
+- `src/live/` – lock-screen timer (iOS Live Activity + bridge); `modules/focus-notification/` – Android native countdown notification
 - `src/lib/notifications.ts` – reminders
 - `src/components/` – UI building blocks
